@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Worklist</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --panel-2:#f0f2f5; --line:#e2e5ea;
+    --text:#14181f; --muted:#6b7480; --accent:#2f6bd8; --accent-soft:#e6eefc;
+    --p1:#c62f2f; --p2:#c2761b; --p3:#5b6470;
+    --ok:#1f8a4c; --warn:#c2761b; --danger:#c62f2f; --wait:#7a4fc4;
+    --radius:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#12141a; --panel:#191c24; --panel-2:#20242e; --line:#2c313d;
+      --text:#e7eaf0; --muted:#98a1b0; --accent:#6fa0ff; --accent-soft:#1e2a44;
+      --p1:#ff7a7a; --p2:#ffb45e; --p3:#9aa4b2;
+      --ok:#57d18b; --warn:#ffb45e; --danger:#ff7a7a; --wait:#b498f5;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:15px/1.45 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:900px;margin:0 auto;padding:24px 18px 80px}
+  h1{font-size:20px;margin:0;letter-spacing:-.01em}
+  header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .sub{color:var(--muted);font-size:13px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+
+  /* quick add */
+  .add{display:flex;gap:8px;padding:10px;margin-bottom:8px}
+  .add input{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;color:var(--text);font:inherit}
+  .add input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--text);padding:8px 12px}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .hint{color:var(--muted);font-size:12px;margin:0 0 18px 4px}
+  .hint code{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+
+  /* toolbar */
+  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .views{display:flex;gap:4px;flex-wrap:wrap}
+  .pill{padding:6px 11px;font-size:13px;border-radius:999px;background:transparent;border:1px solid transparent;color:var(--muted)}
+  .pill:hover{background:var(--panel-2)}
+  .pill.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+  .pill .n{opacity:.7;margin-left:5px;font-variant-numeric:tabular-nums}
+  .spacer{flex:1}
+  select,input[type=date],input[type=text].mini{background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:6px 8px;color:var(--text);font:inherit;font-size:13px}
+
+  /* task */
+  .list{display:flex;flex-direction:column;gap:8px}
+  .task{padding:10px 12px}
+  .task.done{opacity:.55}
+  .top{display:flex;gap:10px;align-items:flex-start}
+  .check{width:19px;height:19px;flex:none;margin-top:2px;border-radius:50%;border:2px solid var(--line);
+    background:transparent;padding:0;line-height:1;color:transparent;font-size:12px}
+  .check:hover{border-color:var(--accent)}
+  .task.done .check{background:var(--ok);border-color:var(--ok);color:#fff}
+  .main{flex:1;min-width:0}
+  .title{font-weight:550;word-break:break-word;padding:1px 3px;margin:-1px -3px;border-radius:5px}
+  .title:focus{outline:none;background:var(--panel-2)}
+  .task.done .title{text-decoration:line-through}
+  .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;align-items:center}
+  .tag{font-size:11.5px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+  .tag.p1{color:var(--p1);border-color:var(--p1)}
+  .tag.p2{color:var(--p2);border-color:var(--p2)}
+  .tag.p3{color:var(--p3)}
+  .tag.proj{color:var(--accent);border-color:var(--accent)}
+  .tag.due.over{color:var(--danger);border-color:var(--danger)}
+  .tag.due.soon{color:var(--warn);border-color:var(--warn)}
+  .tag.wait{color:var(--wait);border-color:var(--wait)}
+  .tag.stale{color:var(--warn);border-color:var(--warn)}
+  /* ageing ramp: quiet when fresh, louder the longer it sits */
+  .tag.age{color:var(--muted);border-style:dashed}
+  .tag.age.a1{color:var(--text)}
+  .tag.age.a2{color:var(--warn);border-color:var(--warn)}
+  .tag.age.a3{color:var(--danger);border-color:var(--danger);font-weight:600}
+  /* owed-to chip with an inline editable name */
+  .tag.owed{display:inline-flex;align-items:center;gap:5px;border-style:dashed}
+  .tag.owed.set{color:var(--accent);border-color:var(--accent);border-style:solid}
+  .tag.owed .lbl{opacity:.75}
+  .tag.owed .val{min-width:16px;padding:0 2px;border-radius:3px;font-weight:600;outline:none}
+  .tag.owed .val:focus{background:var(--panel-2);box-shadow:0 0 0 2px var(--accent-soft)}
+  .tag.owed .val:empty::before{content:attr(data-ph);opacity:.55;font-weight:400}
+  /* importance flag + picker */
+  .flagwrap{position:relative;flex:none}
+  .flag{display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:12.5px;
+    border:1px solid var(--line);color:var(--muted);background:transparent}
+  .flag .ico{font-size:13px;line-height:1}
+  .flag.p1{color:var(--p1);border-color:var(--p1);background:color-mix(in srgb, var(--p1) 10%, transparent)}
+  .flag.p2{color:var(--p2);border-color:var(--p2);background:color-mix(in srgb, var(--p2) 10%, transparent)}
+  .flag.p3{color:var(--p3);border-color:var(--p3)}
+  .priomenu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;display:none;
+    flex-direction:column;gap:2px;padding:4px;min-width:150px;
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    box-shadow:0 8px 24px rgba(0,0,0,.18)}
+  .priomenu.open{display:flex}
+  .priomenu button{display:flex;align-items:center;gap:8px;border:none;background:transparent;
+    text-align:left;font-size:13px;padding:6px 8px;width:100%}
+  .priomenu button:hover{background:var(--panel-2)}
+  .priomenu button.sel{background:var(--accent-soft);color:var(--accent)}
+  .priomenu .dot{width:9px;height:9px;border-radius:50%;flex:none;border:1.5px solid currentColor}
+  .priomenu .d1{color:var(--p1);background:var(--p1)}
+  .priomenu .d2{color:var(--p2);background:var(--p2)}
+  .priomenu .d3{color:var(--p3);background:var(--p3)}
+  .priomenu .d0{color:var(--muted);background:transparent}
+  .priomenu small{color:var(--muted);margin-left:auto}
+  .rowacts{display:flex;gap:6px;align-items:center;flex:none}
+  .rowacts button{padding:4px 8px;font-size:12.5px}
+  .icon{border:none;background:transparent;color:var(--muted);padding:4px 6px}
+  .icon:hover{color:var(--danger);background:var(--panel-2)}
+
+  /* follow-ups */
+  .fus{list-style:none;margin:8px 0 0;padding:0 0 0 29px;display:flex;flex-direction:column;gap:5px}
+  .fus:empty{display:none}
+  .fu{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;
+    border-left:2px solid var(--line);padding:2px 0 2px 10px}
+  .fu.done{opacity:.5}
+  .fu.done .fu-text{text-decoration:line-through}
+  .fu input[type=checkbox]{margin-top:3px;accent-color:var(--ok)}
+  .fu-text{flex:1;word-break:break-word;padding:0 3px;border-radius:4px}
+  .fu-text:focus{outline:none;background:var(--panel-2)}
+  .fuform{display:flex;gap:6px;flex-wrap:wrap;padding:8px 0 2px 39px}
+  .fuform input[type=text]{flex:1;min-width:150px}
+  .fuform.hide{display:none}
+
+  .empty{padding:36px 20px;text-align:center;color:var(--muted)}
+  footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px;font-size:13px;align-items:center}
+  footer button{font-size:13px;padding:6px 10px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);
+    color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13.5px;opacity:0;
+    pointer-events:none;transition:opacity .18s}
+  .toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Worklist</h1>
+    <span class="sub" id="stats"></span>
+  </header>
+
+  <div class="card add">
+    <input id="q" type="text" autocomplete="off" placeholder="New task — e.g. Draft Q3 review deck #reporting @Priya !1 friday">
+    <button class="primary" id="addBtn">Add</button>
+  </div>
+  <p class="hint">
+    <code>#project</code> tags it &middot; <code>@name</code> is who you owe it to &middot;
+    <code>!1</code>–<code>!3</code> sets importance (or click the &#9873; flag on any task) &middot;
+    <code>today</code> / <code>tomorrow</code> / <code>fri</code> / <code>2026-09-01</code> sets a due date &middot;
+    <code>/</code> jumps to search
+  </p>
+
+  <div class="bar">
+    <nav class="views" id="views"></nav>
+    <span class="spacer"></span>
+    <select id="projFilter"><option value="">All projects</option></select>
+    <select id="owedFilter"><option value="">Anyone</option></select>
+    <select id="sortBy">
+      <option value="smart">Sort: due date</option>
+      <option value="oldest">Sort: oldest first</option>
+      <option value="idle">Sort: longest untouched</option>
+      <option value="newest">Sort: newest first</option>
+    </select>
+    <input class="mini" id="search" type="text" placeholder="Search…">
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <footer>
+    <button id="copyBtn">Copy stand-up summary</button>
+    <button id="exportBtn">Export JSON</button>
+    <button id="importBtn">Import JSON</button>
+    <input type="file" id="file" accept="application/json" hidden>
+    <span class="spacer"></span>
+    <button id="clearDone">Clear completed</button>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY = 'worklist.v1';
+const STALE_DAYS = 3;
+const PRIO = {
+  1: {label:'Critical',  hint:'P1'},
+  2: {label:'Important', hint:'P2'},
+  3: {label:'Low',       hint:'P3'},
+  0: {label:'No priority', hint:'—'}
+};
+const VIEWS = [
+  ['open','Open'], ['today','Today'], ['week','This week'],
+  ['overdue','Overdue'], ['waiting','Waiting on'], ['followup','Needs follow-up'],
+  ['done','Done'], ['all','All']
+];
+
+let state = load();
+let view = 'open';
+let sortBy = 'smart';
+
+function load(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(KEY));
+    if(raw && Array.isArray(raw.tasks)) return raw;
+  }catch(e){}
+  return {tasks:[]};
+}
+// Never let a storage failure break the UI — keep working in memory and say so once.
+let storageWarned = false;
+function save(){
+  try{
+    localStorage.setItem(KEY, JSON.stringify(state));
+  }catch(e){
+    if(!storageWarned){
+      storageWarned = true;
+      setTimeout(() => toast('Changes are not being saved — use Export JSON to keep them'), 100);
+    }
+  }
+}
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function nowISO(){ return new Date().toISOString(); }
+
+/* ---------- dates ---------- */
+function key(d){
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function todayKey(){ return key(new Date()); }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function daysUntil(dueKey){
+  if(!dueKey) return null;
+  const [y,m,d] = dueKey.split('-').map(Number);
+  const due = new Date(y, m-1, d);
+  const t = new Date(); t.setHours(0,0,0,0);
+  return Math.round((due - t) / 86400000);
+}
+function dueLabel(k){
+  const n = daysUntil(k);
+  if(n === null) return '';
+  if(n === 0) return 'today';
+  if(n === 1) return 'tomorrow';
+  if(n === -1) return 'yesterday';
+  if(n < 0) return Math.abs(n) + 'd overdue';
+  if(n < 7) return 'in ' + n + 'd';
+  return k;
+}
+function daysSince(iso){
+  if(!iso) return 0;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+}
+// How long something has been sitting there, in human terms.
+function ageLabel(days){
+  if(days <= 0) return 'today';
+  if(days < 7) return days + 'd';
+  if(days < 28) return Math.floor(days/7) + 'w';
+  if(days < 365) return Math.floor(days/30) + 'mo';
+  return Math.floor(days/365) + 'y';
+}
+function ageClass(days){
+  if(days >= 14) return ' a3';
+  if(days >= 7) return ' a2';
+  if(days >= 3) return ' a1';
+  return '';
+}
+
+/* ---------- quick-add parsing ---------- */
+const DOW = {sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6};
+function parseInput(raw){
+  const t = {title:'', project:'', priority:0, due:'', owedTo:''};
+  const words = raw.trim().split(/\s+/);
+  const kept = [];
+  for(const w of words){
+    const lw = w.toLowerCase();
+    if(/^#\S+$/.test(w)){ t.project = w.slice(1); continue; }
+    if(/^@\S+$/.test(w)){ t.owedTo = w.slice(1); continue; }
+    if(/^![123]$/.test(w)){ t.priority = Number(w[1]); continue; }
+    if(/^\d{4}-\d{2}-\d{2}$/.test(w)){ t.due = w; continue; }
+    if(/^\d{1,2}\/\d{1,2}$/.test(w)){
+      const [m,d] = w.split('/').map(Number);
+      const now = new Date();
+      let cand = new Date(now.getFullYear(), m-1, d);
+      if(key(cand) < todayKey()) cand = new Date(now.getFullYear()+1, m-1, d);
+      t.due = key(cand); continue;
+    }
+    if(lw === 'today'){ t.due = todayKey(); continue; }
+    if(lw === 'tomorrow' || lw === 'tmr'){ t.due = key(addDays(new Date(),1)); continue; }
+    const dow = lw.slice(0,3);
+    if(lw.length >= 3 && DOW[dow] !== undefined && /^[a-z]+$/.test(lw)){
+      const now = new Date();
+      let delta = (DOW[dow] - now.getDay() + 7) % 7;
+      if(delta === 0) delta = 7;
+      t.due = key(addDays(now, delta)); continue;
+    }
+    kept.push(w);
+  }
+  t.title = kept.join(' ').trim();
+  return t;
+}
+
+/* ---------- task helpers ---------- */
+function openFollowups(t){ return (t.followups||[]).filter(f => !f.done); }
+function waitingOn(t){
+  const w = openFollowups(t).map(f => f.waitingOn).filter(Boolean);
+  return [...new Set(w)];
+}
+function isStale(t){
+  return t.status !== 'done' && daysSince(t.updated) >= STALE_DAYS;
+}
+function nextDue(t){
+  const ds = [t.due, ...openFollowups(t).map(f => f.due)].filter(Boolean).sort();
+  return ds[0] || '';
+}
+function matchesView(t, v){
+  if(v === 'all') return true;
+  if(v === 'done') return t.status === 'done';
+  if(t.status === 'done') return false;
+  if(v === 'open') return true;
+  if(v === 'waiting') return t.status === 'blocked' || waitingOn(t).length > 0;
+  if(v === 'followup') return isStale(t);
+  const d = nextDue(t);
+  const n = daysUntil(d);
+  if(v === 'overdue') return n !== null && n < 0;
+  if(v === 'today') return n !== null && n <= 0;
+  if(v === 'week') return n !== null && n <= 7;
+  return true;
+}
+function sortTasks(a,b){
+  if(sortBy === 'oldest') return (a.created || '').localeCompare(b.created || '');
+  if(sortBy === 'newest') return (b.created || '').localeCompare(a.created || '');
+  if(sortBy === 'idle') return (a.updated || '').localeCompare(b.updated || '');
+  const da = daysUntil(nextDue(a)), db = daysUntil(nextDue(b));
+  const ka = da === null ? 9999 : da, kb = db === null ? 9999 : db;
+  if(ka !== kb) return ka - kb;
+  const pa = a.priority || 4, pb = b.priority || 4;
+  if(pa !== pb) return pa - pb;
+  return (b.created || '').localeCompare(a.created || '');
+}
+
+/* ---------- mutations ---------- */
+function touch(t){ t.updated = nowISO(); }
+function findTask(id){ return state.tasks.find(t => t.id === id); }
+function addTask(raw){
+  const p = parseInput(raw);
+  if(!p.title) return false;
+  state.tasks.unshift({
+    id: uid(), title: p.title, project: p.project, priority: p.priority,
+    due: p.due, owedTo: p.owedTo, status: 'open', followups: [],
+    created: nowISO(), updated: nowISO()
+  });
+  save(); render(); return true;
+}
+
+/* ---------- render ---------- */
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function visibleTasks(){
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const proj = document.getElementById('projFilter').value;
+  const owed = document.getElementById('owedFilter').value;
+  return state.tasks.filter(t => {
+    if(!matchesView(t, view)) return false;
+    if(proj && t.project !== proj) return false;
+    if(owed && (t.owedTo || '') !== owed) return false;
+    if(q){
+      const hay = (t.title + ' ' + t.project + ' ' + (t.owedTo || '') + ' ' +
+        (t.followups||[]).map(f => f.text + ' ' + (f.waitingOn||'')).join(' ')).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort(sortTasks);
+}
+
+function taskHTML(t){
+  const done = t.status === 'done';
+  const tags = [];
+  if(t.project) tags.push('<span class="tag proj">#' + esc(t.project) + '</span>');
+  if(t.due){
+    const n = daysUntil(t.due);
+    const cls = n < 0 ? ' over' : (n <= 1 ? ' soon' : '');
+    tags.push('<span class="tag due' + cls + '">due ' + esc(dueLabel(t.due)) + '</span>');
+  }
+  if(t.status === 'blocked') tags.push('<span class="tag wait">blocked</span>');
+  else if(t.status === 'doing') tags.push('<span class="tag">in progress</span>');
+  for(const w of waitingOn(t)) tags.push('<span class="tag wait">waiting on ' + esc(w) + '</span>');
+
+  // ageing: how long it has existed, and — only if that differs — how long untouched
+  const age = daysSince(t.created);
+  const idle = daysSince(t.updated);
+  if(!done){
+    tags.push('<span class="tag age' + ageClass(age) + '" title="Added ' + esc((t.created||'').slice(0,10)) +
+      '">open ' + ageLabel(age) + '</span>');
+    if(isStale(t) && idle < age) tags.push('<span class="tag stale">untouched ' + ageLabel(idle) + '</span>');
+  }
+
+  // who this is owed to — editable in place
+  tags.push('<span class="tag owed' + (t.owedTo ? ' set' : '') + '">' +
+    '<span class="lbl">owed to</span>' +
+    '<span class="val" contenteditable="true" data-act="owedtext" data-ph="add name">' + esc(t.owedTo) + '</span>' +
+  '</span>');
+  const nOpen = openFollowups(t).length;
+  if(nOpen) tags.push('<span class="tag">' + nOpen + ' follow-up' + (nOpen > 1 ? 's' : '') + '</span>');
+
+  const fus = (t.followups || []).map(f => {
+    const bits = [];
+    if(f.waitingOn) bits.push('<span class="tag wait">' + esc(f.waitingOn) + '</span>');
+    if(!f.done){
+      const fage = daysSince(f.created);
+      if(fage >= 1) bits.push('<span class="tag age' + ageClass(fage) + '">pending ' + ageLabel(fage) + '</span>');
+    }
+    if(f.due){
+      const n = daysUntil(f.due);
+      bits.push('<span class="tag due' + (n < 0 ? ' over' : (n <= 1 ? ' soon' : '')) + '">' + esc(dueLabel(f.due)) + '</span>');
+    }
+    return '<li class="fu' + (f.done ? ' done' : '') + '" data-fu="' + f.id + '">' +
+      '<input type="checkbox" data-act="futoggle"' + (f.done ? ' checked' : '') + '>' +
+      '<span class="fu-text" contenteditable="true" data-act="futext">' + esc(f.text) + '</span>' +
+      bits.join('') +
+      '<button class="icon" data-act="fudel" title="Delete follow-up">&times;</button></li>';
+  }).join('');
+
+  return '<article class="task card' + (done ? ' done' : '') + '" data-id="' + t.id + '">' +
+    '<div class="top">' +
+      '<button class="check" data-act="toggle" title="Complete">&#10003;</button>' +
+      '<div class="main">' +
+        '<div class="title" contenteditable="true" data-act="title">' + esc(t.title) + '</div>' +
+        '<div class="meta">' + tags.join('') + '</div>' +
+      '</div>' +
+      '<div class="rowacts">' +
+        '<span class="flagwrap">' +
+          '<button class="flag p' + (t.priority || 0) + '" data-act="prio" ' +
+            'title="Importance — ' + (t.priority ? PRIO[t.priority].label : 'not set') + '">' +
+            '<span class="ico">' + (t.priority ? '&#9873;' : '&#9872;') + '</span>' +
+            (t.priority ? 'P' + t.priority : 'Set') +
+          '</button>' +
+          '<div class="priomenu">' +
+            [1,2,3,0].map(p =>
+              '<button data-p="' + p + '"' + ((t.priority || 0) === p ? ' class="sel"' : '') + '>' +
+                '<span class="dot d' + p + '"></span>' + PRIO[p].label +
+                '<small>' + PRIO[p].hint + '</small>' +
+              '</button>').join('') +
+          '</div>' +
+        '</span>' +
+        '<button data-act="showfu">+ follow-up</button>' +
+        '<select data-act="status" title="Status">' +
+          ['open','doing','blocked','done'].map(s =>
+            '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' +
+            ({open:'Open',doing:'In progress',blocked:'Blocked',done:'Done'})[s] + '</option>').join('') +
+        '</select>' +
+        '<button class="icon" data-act="del" title="Delete task">&times;</button>' +
+      '</div>' +
+    '</div>' +
+    '<ul class="fus">' + fus + '</ul>' +
+    '<form class="fuform hide">' +
+      '<input type="text" placeholder="Follow-up action…" data-f="text" required>' +
+      '<input class="mini" type="text" placeholder="waiting on (optional)" data-f="who" style="max-width:170px">' +
+      '<input type="date" data-f="due">' +
+      '<button class="primary" type="submit">Add</button>' +
+    '</form>' +
+  '</article>';
+}
+
+function render(){
+  // views
+  document.getElementById('views').innerHTML = VIEWS.map(([v,label]) => {
+    const n = state.tasks.filter(t => matchesView(t, v)).length;
+    return '<button class="pill' + (v === view ? ' on' : '') + '" data-view="' + v + '">' +
+      label + '<span class="n">' + n + '</span></button>';
+  }).join('');
+
+  // project filter
+  const sel = document.getElementById('projFilter');
+  const cur = sel.value;
+  const projects = [...new Set(state.tasks.map(t => t.project).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">All projects</option>' +
+    projects.map(p => '<option value="' + esc(p) + '">#' + esc(p) + '</option>').join('');
+  sel.value = projects.includes(cur) ? cur : '';
+
+  // people this work is owed to
+  const osel = document.getElementById('owedFilter');
+  const ocur = osel.value;
+  const people = [...new Set(state.tasks.map(t => t.owedTo).filter(Boolean))].sort();
+  osel.innerHTML = '<option value="">Anyone</option>' +
+    people.map(p => '<option value="' + esc(p) + '">owed to ' + esc(p) + '</option>').join('');
+  osel.value = people.includes(ocur) ? ocur : '';
+
+  // stats
+  const open = state.tasks.filter(t => t.status !== 'done');
+  const overdue = open.filter(t => { const n = daysUntil(nextDue(t)); return n !== null && n < 0; }).length;
+  const fu = open.reduce((s,t) => s + openFollowups(t).length, 0);
+  document.getElementById('stats').textContent =
+    open.length + ' open · ' + fu + ' follow-up' + (fu === 1 ? '' : 's') + ' · ' + overdue + ' overdue';
+
+  // list
+  const items = visibleTasks();
+  document.getElementById('list').innerHTML = items.length
+    ? items.map(taskHTML).join('')
+    : '<div class="card empty">Nothing here.' +
+      (state.tasks.length ? '' : ' Add your first task above, or <button id="seed">load a sample list</button>.') +
+      '</div>';
+}
+
+/* ---------- events ---------- */
+document.getElementById('addBtn').onclick = quickAdd;
+document.getElementById('q').addEventListener('keydown', e => { if(e.key === 'Enter') quickAdd(); });
+function quickAdd(){
+  const i = document.getElementById('q');
+  if(addTask(i.value)) i.value = '';
+  i.focus();
+}
+
+document.getElementById('views').addEventListener('click', e => {
+  const b = e.target.closest('[data-view]');
+  if(b){ view = b.dataset.view; render(); }
+});
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('projFilter').addEventListener('change', render);
+document.getElementById('owedFilter').addEventListener('change', render);
+document.getElementById('sortBy').addEventListener('change', e => { sortBy = e.target.value; render(); });
+
+document.addEventListener('keydown', e => {
+  if(e.key === '/' && !/^(INPUT|TEXTAREA)$/.test(e.target.tagName) && !e.target.isContentEditable){
+    e.preventDefault(); document.getElementById('search').focus();
+  }
+});
+
+const list = document.getElementById('list');
+
+function closeMenus(){
+  document.querySelectorAll('.priomenu.open').forEach(m => m.classList.remove('open'));
+}
+// click anywhere else, or Esc, dismisses an open picker
+document.addEventListener('click', e => { if(!e.target.closest('.flagwrap')) closeMenus(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeMenus(); });
+
+list.addEventListener('click', e => {
+  if(e.target.id === 'seed'){ seed(); return; }
+  const art = e.target.closest('.task');
+  if(!art) return;
+  const t = findTask(art.dataset.id);
+  if(!t) return;
+  const act = e.target.closest('[data-act]') && e.target.closest('[data-act]').dataset.act;
+
+  // importance picker
+  const pick = e.target.closest('[data-p]');
+  if(pick){
+    t.priority = Number(pick.dataset.p);
+    touch(t); save(); render();
+    return;
+  }
+  if(act === 'prio'){
+    const menu = e.target.closest('.flagwrap').querySelector('.priomenu');
+    const wasOpen = menu.classList.contains('open');
+    closeMenus();
+    if(!wasOpen) menu.classList.add('open');
+    return;
+  }
+  closeMenus();
+
+  if(act === 'toggle'){
+    t.status = t.status === 'done' ? 'open' : 'done';
+    touch(t); save(); render();
+  } else if(act === 'del'){
+    state.tasks = state.tasks.filter(x => x.id !== t.id);
+    save(); render();
+  } else if(act === 'showfu'){
+    const f = art.querySelector('.fuform');
+    f.classList.toggle('hide');
+    if(!f.classList.contains('hide')) f.querySelector('[data-f=text]').focus();
+  } else if(act === 'futoggle'){
+    const li = e.target.closest('.fu');
+    const f = t.followups.find(x => x.id === li.dataset.fu);
+    f.done = e.target.checked;
+    touch(t); save(); render();
+  } else if(act === 'fudel'){
+    const li = e.target.closest('.fu');
+    t.followups = t.followups.filter(x => x.id !== li.dataset.fu);
+    touch(t); save(); render();
+  }
+});
+
+list.addEventListener('change', e => {
+  const art = e.target.closest('.task');
+  if(!art) return;
+  const t = findTask(art.dataset.id);
+  if(t && e.target.dataset.act === 'status'){
+    t.status = e.target.value; touch(t); save(); render();
+  }
+});
+
+list.addEventListener('submit', e => {
+  e.preventDefault();
+  const art = e.target.closest('.task');
+  const t = findTask(art.dataset.id);
+  if(!t) return;
+  const text = e.target.querySelector('[data-f=text]').value.trim();
+  if(!text) return;
+  t.followups = t.followups || [];
+  t.followups.push({
+    id: uid(), text,
+    waitingOn: e.target.querySelector('[data-f=who]').value.trim(),
+    due: e.target.querySelector('[data-f=due]').value,
+    done: false, created: nowISO()
+  });
+  touch(t); save(); render();
+});
+
+// inline editing of titles and follow-up text
+list.addEventListener('blur', e => {
+  const el = e.target;
+  const act = el.dataset && el.dataset.act;
+  if(act !== 'title' && act !== 'futext' && act !== 'owedtext') return;
+  const art = el.closest('.task');
+  const t = findTask(art.dataset.id);
+  if(!t) return;
+  const val = el.textContent.trim();
+  if(act === 'owedtext'){
+    if(val !== (t.owedTo || '')){ t.owedTo = val; touch(t); save(); render(); }
+  } else if(act === 'title'){
+    if(!val){ render(); return; }
+    if(val !== t.title){ t.title = val; touch(t); save(); }
+  } else {
+    const f = t.followups.find(x => x.id === el.closest('.fu').dataset.fu);
+    if(!f) return;
+    if(!val){ render(); return; }
+    if(val !== f.text){ f.text = val; touch(t); save(); }
+  }
+}, true);
+
+list.addEventListener('keydown', e => {
+  const act = e.target.dataset && e.target.dataset.act;
+  if((act === 'title' || act === 'futext' || act === 'owedtext') && e.key === 'Enter'){
+    e.preventDefault(); e.target.blur();
+  }
+});
+
+/* ---------- footer actions ---------- */
+document.getElementById('clearDone').onclick = () => {
+  const n = state.tasks.filter(t => t.status === 'done').length;
+  if(!n) return toast('No completed tasks');
+  if(!confirm('Delete ' + n + ' completed task' + (n > 1 ? 's' : '') + '?')) return;
+  state.tasks = state.tasks.filter(t => t.status !== 'done');
+  save(); render(); toast('Cleared ' + n);
+};
+
+document.getElementById('exportBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'worklist-' + todayKey() + '.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+
+document.getElementById('importBtn').onclick = () => document.getElementById('file').click();
+document.getElementById('file').onchange = e => {
+  const f = e.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const data = JSON.parse(r.result);
+      if(!data || !Array.isArray(data.tasks)) throw 0;
+      if(!confirm('Replace current list with ' + data.tasks.length + ' imported tasks?')) return;
+      state = data; save(); render(); toast('Imported');
+    }catch(err){ toast('Could not read that file'); }
+  };
+  r.readAsText(f);
+  e.target.value = '';
+};
+
+document.getElementById('copyBtn').onclick = () => {
+  const open = state.tasks.filter(t => t.status !== 'done').sort(sortTasks);
+  const doneRecently = state.tasks.filter(t => t.status === 'done' && daysSince(t.updated) <= 7);
+  const line = t => {
+    const bits = [];
+    if(t.project) bits.push('#' + t.project);
+    if(t.priority) bits.push('P' + t.priority);
+    if(t.owedTo) bits.push('owed to ' + t.owedTo);
+    if(t.due) bits.push('due ' + dueLabel(t.due));
+    if(t.status !== 'done') bits.push('open ' + ageLabel(daysSince(t.created)));
+    return '- ' + t.title + (bits.length ? '  (' + bits.join(', ') + ')' : '');
+  };
+  const out = ['# Worklist — ' + todayKey(), ''];
+  // Buckets are disjoint, in priority order: blocked wins over in-progress.
+  const blocked = open.filter(t => t.status === 'blocked' || waitingOn(t).length);
+  const doing = open.filter(t => t.status === 'doing' && !blocked.includes(t));
+  const rest = open.filter(t => !doing.includes(t) && !blocked.includes(t));
+  if(doneRecently.length){
+    out.push('## Done this week');
+    doneRecently.forEach(t => out.push(line(t)));
+    out.push('');
+  }
+  if(doing.length){ out.push('## In progress'); doing.forEach(t => out.push(line(t))); out.push(''); }
+  if(rest.length){ out.push('## Up next'); rest.forEach(t => out.push(line(t))); out.push(''); }
+  if(blocked.length){
+    out.push('## Blocked / waiting on');
+    blocked.forEach(t => {
+      out.push(line(t));
+      openFollowups(t).forEach(f =>
+        out.push('  - ' + f.text + (f.waitingOn ? ' — waiting on ' + f.waitingOn : '') + (f.due ? ' (' + dueLabel(f.due) + ')' : '')));
+    });
+    out.push('');
+  }
+  const fu = open.filter(t => openFollowups(t).length && !blocked.includes(t));
+  if(fu.length){
+    out.push('## Follow-ups');
+    fu.forEach(t => openFollowups(t).forEach(f =>
+      out.push('- ' + f.text + ' — ' + t.title + (f.due ? ' (' + dueLabel(f.due) + ')' : ''))));
+  }
+  copy(out.join('\n'));
+};
+
+function copy(text){
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).then(() => toast('Summary copied'), () => fallback(text));
+  } else fallback(text);
+  function fallback(t){
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); toast('Summary copied'); }
+    catch(e){ toast('Copy failed — see console'); console.log(t); }
+    ta.remove();
+  }
+}
+
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('on'), 1800);
+}
+
+function seed(){
+  const d = n => key(addDays(new Date(), n));
+  const ago = n => new Date(Date.now() - n*86400000).toISOString();
+  state.tasks = [
+    {id:uid(), title:'Send Q3 roadmap draft for review', project:'planning', priority:1, owedTo:'Priya',
+     due:d(1), status:'doing', created:ago(4), updated:ago(1),
+     followups:[{id:uid(), text:'Chase sign-off after she reads it', waitingOn:'Priya', due:d(3), done:false, created:ago(1)}]},
+    {id:uid(), title:'Vendor contract renewal — confirm pricing', project:'ops', priority:2, owedTo:'Marcus',
+     due:d(-1), status:'blocked', created:ago(21), updated:ago(6),
+     followups:[{id:uid(), text:'Ping procurement for the updated quote', waitingOn:'Procurement', due:d(0), done:false, created:ago(9)}]},
+    {id:uid(), title:'Write up findings from the customer interviews', project:'research', priority:2, owedTo:'Priya',
+     due:d(4), status:'open', created:ago(9), updated:ago(2), followups:[]},
+    {id:uid(), title:'Book travel for the offsite', project:'admin', priority:3, owedTo:'',
+     due:'', status:'open', created:ago(1), updated:ago(1),
+     followups:[{id:uid(), text:'Confirm hotel block size with Sam', waitingOn:'Sam', due:d(2), done:false, created:ago(1)}]}
+  ];
+  save(); render();
+}
+
+render();
+</script>
+</body>
+</html>

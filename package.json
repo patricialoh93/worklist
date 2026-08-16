@@ -1,0 +1,13 @@
+{
+  "name": "worklist",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal work to-do list with follow-up actionables, ageing and importance flags",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
