@@ -129,6 +129,19 @@
   .fuform input[type=text]{flex:1;min-width:150px}
   .fuform.hide{display:none}
 
+  /* delete button — deliberately plain until you hover it */
+  button.del{color:var(--muted);padding:4px 10px;font-size:12.5px}
+  button.del:hover{color:#fff;background:var(--danger);border-color:var(--danger)}
+  /* a newly added task pulses once so you can see where it landed */
+  @keyframes land{from{background:var(--accent-soft)}to{background:var(--panel)}}
+  .task.new{animation:land 1.4s ease-out}
+  /* storage-blocked banner */
+  .warn{padding:11px 14px;margin-bottom:10px;border-radius:var(--radius);
+    background:color-mix(in srgb, var(--danger) 12%, var(--panel));
+    border:1px solid var(--danger);color:var(--text);font-size:13.5px;line-height:1.5}
+  .warn.hide{display:none}
+  .warn b{color:var(--danger)}
+  .saved{color:var(--muted);font-size:12.5px}
   .empty{padding:36px 20px;text-align:center;color:var(--muted)}
   footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px;font-size:13px;align-items:center}
   footer button{font-size:13px;padding:6px 10px}
@@ -144,6 +157,8 @@
     <h1>Worklist</h1>
     <span class="sub" id="stats"></span>
   </header>
+
+  <div class="warn hide" id="warn"></div>
 
   <div class="card add">
     <input id="q" type="text" autocomplete="off" placeholder="New task — e.g. Draft Q3 review deck #reporting @Priya !1 friday">
@@ -177,6 +192,7 @@
     <button id="exportBtn">Export JSON</button>
     <button id="importBtn">Import JSON</button>
     <input type="file" id="file" accept="application/json" hidden>
+    <span class="saved" id="savedNote"></span>
     <span class="spacer"></span>
     <button id="clearDone">Clear completed</button>
   </footer>
@@ -209,16 +225,35 @@ function load(){
   }catch(e){}
   return {tasks:[]};
 }
-// Never let a storage failure break the UI — keep working in memory and say so once.
-let storageWarned = false;
+// Never let a storage failure break the UI — keep working in memory and say so loudly.
+let storageOK = true;
 function save(){
   try{
     localStorage.setItem(KEY, JSON.stringify(state));
+    if(!storageOK){ storageOK = true; showStorageState(); }
+    const note = document.getElementById('savedNote');
+    if(note) note.textContent = 'Saved in this browser · ' + state.tasks.length + ' task' +
+      (state.tasks.length === 1 ? '' : 's');
   }catch(e){
-    if(!storageWarned){
-      storageWarned = true;
-      setTimeout(() => toast('Changes are not being saved — use Export JSON to keep them'), 100);
-    }
+    if(storageOK){ storageOK = false; showStorageState(); }
+  }
+}
+// A blocked-storage warning has to be permanent and unmissable — a toast is not enough,
+// because the consequence is silently losing every task you type.
+function showStorageState(){
+  const el = document.getElementById('warn');
+  const note = document.getElementById('savedNote');
+  if(!el) return;
+  if(storageOK){
+    el.classList.add('hide');
+  } else {
+    el.classList.remove('hide');
+    el.innerHTML = '<b>Your tasks are not being saved.</b> This browser is blocking storage for ' +
+      'this page, so anything you add will vanish when you reload. This normally means the app ' +
+      'is open in a preview or sandboxed window. Open it at its own address instead — the ' +
+      'Railway URL, or the index.html file itself — and your tasks will persist. ' +
+      'Use <b>Export JSON</b> now if you want to keep what is on screen.';
+    if(note) note.textContent = 'Not saving';
   }
 }
 function uid(){ return Math.random().toString(36).slice(2,10); }
@@ -345,12 +380,33 @@ function findTask(id){ return state.tasks.find(t => t.id === id); }
 function addTask(raw){
   const p = parseInput(raw);
   if(!p.title) return false;
-  state.tasks.unshift({
+  const task = {
     id: uid(), title: p.title, project: p.project, priority: p.priority,
     due: p.due, owedTo: p.owedTo, status: 'open', followups: [],
     created: nowISO(), updated: nowISO()
-  });
-  save(); render(); return true;
+  };
+  state.tasks.unshift(task);
+  save();
+  reveal(task);
+  return true;
+}
+
+// A task added while a narrow view or a filter is active would be filed correctly but
+// drop out of sight, which reads as "it didn't save". Always show what was just typed.
+function reveal(t){
+  if(!matchesView(t, view)) view = 'open';
+  const q = document.getElementById('search');
+  const proj = document.getElementById('projFilter');
+  const owed = document.getElementById('owedFilter');
+  if(q.value.trim()) q.value = '';
+  if(proj.value && proj.value !== t.project) proj.value = '';
+  if(owed.value && owed.value !== (t.owedTo || '')) owed.value = '';
+  render();
+  const el = document.querySelector('.task[data-id="' + t.id + '"]');
+  if(el){
+    el.classList.add('new');
+    el.scrollIntoView({block:'nearest'});
+  }
 }
 
 /* ---------- render ---------- */
@@ -449,7 +505,7 @@ function taskHTML(t){
             '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' +
             ({open:'Open',doing:'In progress',blocked:'Blocked',done:'Done'})[s] + '</option>').join('') +
         '</select>' +
-        '<button class="icon" data-act="del" title="Delete task">&times;</button>' +
+        '<button class="del" data-act="del" title="Delete this task permanently">Delete</button>' +
       '</div>' +
     '</div>' +
     '<ul class="fus">' + fus + '</ul>' +
@@ -563,6 +619,9 @@ list.addEventListener('click', e => {
     t.status = t.status === 'done' ? 'open' : 'done';
     touch(t); save(); render();
   } else if(act === 'del'){
+    // Deleting is the only way a task leaves the list, so make it deliberate.
+    if(!confirm('Delete this task permanently?\n\n' + t.title +
+      ((t.followups || []).length ? '\n\n' + t.followups.length + ' follow-up(s) will go with it.' : ''))) return;
     state.tasks = state.tasks.filter(x => x.id !== t.id);
     save(); render();
   } else if(act === 'showfu'){
@@ -753,6 +812,26 @@ function seed(){
   ];
   save(); render();
 }
+
+// Check storage before anything is typed, so a browser that silently discards data
+// (private windows, in-app browsers) announces itself up front instead of after a lost list.
+(function checkStorage(){
+  try{
+    const probe = KEY + '.probe';
+    localStorage.setItem(probe, '1');
+    if(localStorage.getItem(probe) !== '1') throw new Error('readback failed');
+    localStorage.removeItem(probe);
+    storageOK = true;
+  }catch(e){
+    storageOK = false;
+  }
+  showStorageState();
+  const note = document.getElementById('savedNote');
+  if(storageOK && note){
+    note.textContent = 'Saved in this browser · ' + state.tasks.length +
+      ' task' + (state.tasks.length === 1 ? '' : 's');
+  }
+})();
 
 render();
 </script>
