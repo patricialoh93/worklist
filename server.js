@@ -12,6 +12,9 @@ const USER = process.env.AUTH_USER || '';
 const PASS = process.env.AUTH_PASS || '';
 const GATED = Boolean(USER && PASS);
 
+// Surfaced on /healthz so a deploy can be verified from outside without credentials.
+const VERSION = (process.env.RAILWAY_GIT_COMMIT_SHA || 'local').slice(0, 7);
+
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -41,7 +44,7 @@ const server = http.createServer((req, res) => {
   const urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
 
   // Health check stays open so Railway can probe it without credentials.
-  if(urlPath === '/healthz') return send(res, 200, 'ok', {'Content-Type': 'text/plain'});
+  if(urlPath === '/healthz') return send(res, 200, 'ok ' + VERSION, {'Content-Type': 'text/plain'});
 
   if(!authed(req)){
     return send(res, 401, 'Authentication required', {
