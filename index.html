@@ -225,7 +225,7 @@
     <button class="primary" id="addBtn">Add</button>
   </div>
   <p class="hint">
-    <code>#project</code> tags it &middot; <code>+name</code> is who does it <code>+name</code> is the owner &middot; <code>@name</code> is who you owe it to &middot;middot; <code>@name</code> is who waits on it <code>+name</code> is the owner &middot; <code>@name</code> is who you owe it to &middot;middot;
+    <code>#project</code> tags it &middot; <code>+name</code> is who does it &middot; <code>@name</code> is who waits on it &middot;
     <code>!1</code>–<code>!3</code> sets importance (or click the &#9873; flag on any task) &middot;
     <code>today</code> / <code>tomorrow</code> / <code>fri</code> / <code>2026-09-01</code> sets a due date &middot;
     <code>/</code> jumps to search
@@ -556,16 +556,18 @@ function taskHTML(t, n){
   }
 
   // who this is owed to — editable in place
-  tags.push('<span class="tag own' + (t.owner ? ' set' : '') + '">' +
-    '<span class="lbl">owner</span>' +
-    '<span class="val" contenteditable="true" data-act="ownertext" data-ph="add name">' + esc(t.owner) + '</span>' +
-  '</span>');
   tags.push('<span class="tag owed' + (t.owedTo ? ' set' : '') + '">' +
     '<span class="lbl">owed to</span>' +
     '<span class="val" contenteditable="true" data-act="owedtext" data-ph="add name">' + esc(t.owedTo) + '</span>' +
   '</span>');
   const nOpen = openFollowups(t).length;
   if(nOpen) tags.push('<span class="tag">' + nOpen + ' follow-up' + (nOpen > 1 ? 's' : '') + '</span>');
+
+  // Owner sits last in the row, on the right, where it reads as the accountable name.
+  tags.push('<span class="tag own' + (t.owner ? ' set' : '') + '">' +
+    '<span class="lbl">owner</span>' +
+    '<span class="val" contenteditable="true" data-act="ownertext" data-ph="add name">' + esc(t.owner) + '</span>' +
+  '</span>');
 
   const fus = (t.followups || []).map(f => {
     const bits = [];
