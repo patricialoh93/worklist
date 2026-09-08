@@ -227,13 +227,18 @@
   .priomenu small{color:var(--muted);margin-left:auto;font-size:11px}
 
   /* ---------- follow-ups ---------- */
-  .fus{list-style:none;margin:11px 0 0;padding:0 0 0 30px;display:flex;flex-direction:column;gap:2px}
+  /* Follow-ups sit in their own tinted tray so they read as a distinct group of
+     commitments rather than blending into the card. */
+  .fus{list-style:none;margin:12px 0 0 30px;padding:8px;display:flex;flex-direction:column;
+    gap:5px;background:color-mix(in srgb, var(--accent) 6%, var(--panel-2));
+    border:1px solid var(--line-soft);border-radius:11px}
   .fus:empty{display:none}
-  .fu{display:flex;gap:9px;align-items:center;font-size:13.3px;color:var(--text-soft);
-    border-left:2px solid var(--line);padding:5px 6px 5px 11px;border-radius:0 7px 7px 0;
-    transition:background .15s,border-color .15s;cursor:default}
-  .fu:hover{background:var(--panel-2);border-left-color:var(--accent)}
-  .fu.done{opacity:.45}
+  .fu{display:flex;gap:10px;align-items:center;font-size:13.3px;color:var(--text);
+    background:var(--panel);border:1px solid var(--line-soft);
+    border-left:3px solid var(--accent);padding:8px 11px;border-radius:8px;
+    transition:box-shadow .15s,border-color .15s;cursor:default}
+  .fu:hover{box-shadow:var(--shadow);border-left-color:var(--accent-deep)}
+  .fu.done{opacity:.5;border-left-color:var(--line)}
   .fu.done .fu-text{text-decoration:line-through}
   .fu input[type=checkbox]{margin:0;accent-color:var(--ok);width:14px;height:14px;flex:none}
   .fu-text{flex:1;word-break:break-word;padding:0 2px}
@@ -245,7 +250,7 @@
   .fuedit input.who{flex:0 1 152px;min-width:110px}
   .fuedit input[type=date]{font-size:12.5px;padding:7px 9px;background:var(--panel)}
   .fuedit button{padding:6px 12px;font-size:12.5px}
-  .fuform{display:flex;gap:7px;flex-wrap:wrap;padding:10px 0 2px 40px}
+  .fuform{display:flex;gap:7px;flex-wrap:wrap;padding:10px 0 2px 38px}
   .fuform input[type=text]{flex:1;min-width:150px;font-size:13.3px}
   .fuform input[type=date]{font-size:12.5px}
   .fuform.hide{display:none}
@@ -397,7 +402,7 @@
     .top{flex-wrap:wrap}
     .rowacts{width:100%;margin-top:9px;justify-content:flex-start;flex-wrap:wrap}
     .main{flex:1 1 60%}
-    .fus{padding-left:14px}
+    .fus{margin-left:12px}
     .fuform{padding-left:14px}
     .tabs{width:100%;justify-content:space-between}
     .tab{padding:8px 12px;font-size:12.5px}
@@ -589,11 +594,11 @@ function load(){
       if(!raw.budget || !Array.isArray(raw.budget.items)) raw.budget = newBudget();
       if(typeof raw.weddingDate !== "string") raw.weddingDate = "";
       if(!Array.isArray(raw.collapsed)) raw.collapsed = [];
-      if(typeof raw.palette !== "string") raw.palette = "sage";
+      if(typeof raw.palette !== "string") raw.palette = "taupe";
       return raw;
     }
   }catch(e){}
-  return {tasks:[], minutes:[], budget:newBudget(), weddingDate:'', collapsed:[], palette:'sage'};
+  return {tasks:[], minutes:[], budget:newBudget(), weddingDate:'', collapsed:[], palette:'taupe'};
 }
 // Never let a storage failure break the UI — keep working in memory and say so loudly.
 let storageOK = true;
@@ -1466,6 +1471,9 @@ const PALETTES = {
   blush: {name:'Blush & cream',
     light:{bg:'#fbf3ef','bg-tint':'#f6e5de',panel:'#ffffff','panel-2':'#f8ebe6',line:'#e8d2ca','line-soft':'#f2e2dc',text:'#372629','text-soft':'#5f4a4e',muted:'#8d7579',accent:'#b3486b','accent-deep':'#8e3253','accent-soft':'#fadde7',gold:'#c39b52'},
     dark:{bg:'#191216','bg-tint':'#22181d',panel:'#241a1f','panel-2':'#2e2229',line:'#42303a','line-soft':'#35262d',text:'#f5e8ec','text-soft':'#d3bcc3',muted:'#a88f97',accent:'#e894ae','accent-deep':'#f2acc2','accent-soft':'#3a2530',gold:'#cfa963'}},
+  taupe: {name:'Taupe & sage',
+    light:{bg:'#efe9e1','bg-tint':'#e3dad0',panel:'#fdfbf8','panel-2':'#eae2d8',line:'#d5c9ba','line-soft':'#e5dcd1',text:'#312e29','text-soft':'#5b544b',muted:'#8a8074',accent:'#5f6f52','accent-deep':'#48563d','accent-soft':'#e2e8db',gold:'#a98f52'},
+    dark:{bg:'#191713','bg-tint':'#221e19',panel:'#221f1a','panel-2':'#2b2720',line:'#413a2f','line-soft':'#332d25',text:'#f2ece3','text-soft':'#cfc5b7',muted:'#a19789',accent:'#a7bd93','accent-deep':'#bdd0aa','accent-soft':'#2a3125',gold:'#cbae6a'}},
   sage: {name:'Sage & linen',
     light:{bg:'#eef2ea','bg-tint':'#e0e8da',panel:'#ffffff','panel-2':'#e8eee3',line:'#cdd8c4','line-soft':'#dde5d6',text:'#212b24','text-soft':'#44523f',muted:'#6f7d69',accent:'#4a7c59','accent-deep':'#365f42','accent-soft':'#dceade',gold:'#a8913f'},
     dark:{bg:'#131711','bg-tint':'#1a2018',panel:'#1c221a','panel-2':'#242c22',line:'#374332','line-soft':'#2c3529',text:'#eaf1e7','text-soft':'#c2cebd',muted:'#95a48f',accent:'#7fc08f','accent-deep':'#9ad3a8','accent-soft':'#25352a',gold:'#c2ab5e'}},
@@ -1490,7 +1498,7 @@ palSel.addEventListener('change', e => {
 });
 
 function applyPalette(){
-  const p = PALETTES[state.palette] || PALETTES.sage;
+  const p = PALETTES[state.palette] || PALETTES.taupe;
   const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const vars = dark ? p.dark : p.light;
   const root = document.documentElement;
