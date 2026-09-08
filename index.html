@@ -10,13 +10,13 @@
 <style>
   /* ---------- tokens ---------- */
   :root{
-    --bg:#fbf6f3; --bg-tint:#f6eae5;
-    --panel:#ffffff; --panel-2:#f9f1ee; --line:#ecdcd5; --line-soft:#f4e9e4;
-    --text:#3a2a2e; --text-soft:#6b555a; --muted:#948084;
-    --accent:#a85472; --accent-deep:#8d3f5c; --accent-soft:#fbeaf0;
-    --p1:#b8375a; --p2:#b07d2e; --p3:#948084;
-    --ok:#5e8a63; --warn:#b07d2e; --danger:#b8375a; --wait:#7e63a3; --own:#3f7683;
-    --gold:#c8a15a;
+    --bg:#eaeef6; --bg-tint:#dde4f0;
+    --panel:#ffffff; --panel-2:#e4eaf4; --line:#c9d3e4; --line-soft:#dbe2ee;
+    --text:#1a2130; --text-soft:#414a5e; --muted:#697285;
+    --accent:#9c2f57; --accent-deep:#7a1c40; --accent-soft:#f7dae6;
+    --p1:#c2185b; --p2:#9a6410; --p3:#697285;
+    --ok:#3d7a49; --warn:#9a6410; --danger:#c2185b; --wait:#6b4fa0; --own:#1c6172;
+    --gold:#b8892f;
     --radius:14px; --radius-sm:9px;
     --shadow:0 1px 2px rgba(74,38,50,.04), 0 6px 18px -8px rgba(74,38,50,.10);
     --shadow-lift:0 2px 6px rgba(74,38,50,.06), 0 14px 32px -12px rgba(74,38,50,.18);
@@ -46,7 +46,7 @@
 
   /* ---------- masthead ---------- */
   header{text-align:center;margin-bottom:24px}
-  h1{margin:0;font-family:var(--serif);font-weight:600;font-size:44px;line-height:1.05;
+  h1{margin:0;font-family:var(--serif);font-weight:700;font-size:46px;line-height:1.05;
     color:var(--accent-deep)}
   header .sub{display:block;margin-top:10px;color:var(--muted);font-size:12px;
     letter-spacing:.09em;text-transform:uppercase}
@@ -130,7 +130,7 @@
   .task.done .title{color:var(--muted)}
   .task.done .tag{opacity:.65}
   .main{flex:1;min-width:0}
-  .title{font-size:15.5px;font-weight:500;word-break:break-word;padding:2px 4px;margin:-2px -4px;
+  .title{font-size:15.5px;font-weight:600;word-break:break-word;padding:2px 4px;margin:-2px -4px;
     border-radius:6px;color:var(--text)}
   .title:focus{outline:none;background:var(--panel-2);box-shadow:0 0 0 3px var(--accent-soft)}
   .task.done .title{text-decoration:line-through}
@@ -145,7 +145,7 @@
   .task.new{animation:land 1.6s ease-out}
 
   /* ---------- chips ---------- */
-  .tag{font-size:11px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);
+  .tag{font-size:11px;font-weight:500;padding:3px 9px;border-radius:999px;border:1px solid var(--line);
     color:var(--muted);background:var(--panel);white-space:nowrap}
   .tag.p1{color:var(--p1);border-color:var(--p1)}
   .tag.p2{color:var(--p2);border-color:var(--p2)}
@@ -158,7 +158,12 @@
   .tag.age.a1{color:var(--text-soft)}
   .tag.age.a2{color:var(--warn);border-color:var(--warn)}
   .tag.age.a3{color:var(--danger);border-color:var(--danger);font-weight:600}
-  .tag.owed,.tag.own{display:inline-flex;align-items:center;gap:5px;border-style:dashed}
+  .tag.own{display:inline-flex;align-items:center;gap:5px;border-style:dashed}
+  .titlerow{display:flex;align-items:flex-start;gap:12px;justify-content:space-between}
+  .titlerow .title{flex:1;min-width:0}
+  .titleown{flex:none;margin-top:2px;font-size:11.5px;padding:4px 11px}
+  .titleown.set{background:color-mix(in srgb, var(--own) 12%, transparent);border-width:1.5px}
+  .titleown .val{font-size:12.5px}
   .tag.owed.set{color:var(--accent);border-color:var(--accent);border-style:solid;
     background:var(--accent-soft)}
   .tag.own.set{color:var(--own);border-color:var(--own);border-style:solid}
@@ -178,7 +183,7 @@
     color:var(--muted);background:transparent;font-weight:450}
   button.tag.proj:hover{border-color:var(--accent);color:var(--accent)}
   button.tag.proj.set{color:var(--tc);border-color:var(--tc);border-style:solid;font-weight:500;
-    background:color-mix(in srgb, var(--tc) 12%, transparent)}
+    background:color-mix(in srgb, var(--tc) 18%, transparent)}
   button.tag.proj.set:hover{color:var(--tc);border-color:var(--tc);
     background:color-mix(in srgb, var(--tc) 22%, transparent)}
   .tagmenu{position:absolute;left:0;top:calc(100% + 6px);z-index:30;display:none;
@@ -277,7 +282,7 @@
     padding:14px 16px;border-radius:0;text-align:left}
   .clhead:hover{background:var(--panel-2);border-color:transparent}
   .chev{color:var(--muted);font-size:11px;width:12px;flex:none}
-  .clname{flex:1;font-family:var(--serif);font-size:19px;font-weight:600;color:var(--text)}
+  .clname{flex:1;font-family:var(--serif);font-size:20px;font-weight:700;color:var(--text)}
   .clfrac{flex:none;font-size:11.5px;color:var(--muted);border:1px solid var(--line);
     border-radius:999px;padding:3px 10px;font-variant-numeric:tabular-nums}
   .clrows{display:flex;flex-direction:column;border-top:1px solid var(--line-soft)}
@@ -425,7 +430,7 @@
     <button class="primary" id="addBtn">Add</button>
   </div>
   <p class="hint">
-    <code>#church</code> sets a category (or click the <b>+ tag</b> chip) &middot; <code>+name</code> is who does it &middot; <code>@name</code> is who waits on it &middot;
+    <code>#church</code> sets a category (or click the <b>+ tag</b> chip) &middot; <code>@name</code> or <code>+name</code> sets the owner &middot;
     <code>!1</code>–<code>!3</code> sets importance (or click the &#9873; flag on any task) &middot;
     <code>today</code> / <code>tomorrow</code> / <code>fri</code> / <code>2026-09-01</code> sets a due date &middot;
     <code>/</code> jumps to search
@@ -437,7 +442,6 @@
   <div class="bar filters">
     <select id="projFilter" title="Filter by wedding category"><option value="">All categories</option></select>
     <select id="ownerFilter" title="Filter by who is doing the task"><option value="">Any owner</option></select>
-    <select id="owedFilter" title="Filter by who is waiting on the task"><option value="">Owed to anyone</option></select>
     <select id="sortBy">
       <option value="smart">Sort: due date</option>
       <option value="tag">Sort: category</option>
@@ -667,13 +671,13 @@ function ageClass(days){
 /* ---------- quick-add parsing ---------- */
 const DOW = {sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6};
 function parseInput(raw){
-  const t = {title:'', project:'', priority:0, due:'', owedTo:'', owner:''};
+  const t = {title:'', project:'', priority:0, due:'', owner:''};
   const words = raw.trim().split(/\s+/);
   const kept = [];
   for(const w of words){
     const lw = w.toLowerCase();
     if(/^#\S+$/.test(w)){ t.project = w.slice(1).toLowerCase(); continue; }
-    if(/^@\S+$/.test(w)){ t.owedTo = w.slice(1); continue; }
+    if(/^@\S+$/.test(w)){ t.owner = w.slice(1); continue; }
     if(/^\+\S+$/.test(w)){ t.owner = w.slice(1); continue; }
     if(/^![123]$/.test(w)){ t.priority = Number(w[1]); continue; }
     if(/^\d{4}-\d{2}-\d{2}$/.test(w)){ t.due = w; continue; }
@@ -686,8 +690,10 @@ function parseInput(raw){
     }
     if(lw === 'today'){ t.due = todayKey(); continue; }
     if(lw === 'tomorrow' || lw === 'tmr'){ t.due = key(addDays(new Date(),1)); continue; }
-    const dow = lw.slice(0,3);
-    if(lw.length >= 3 && DOW[dow] !== undefined && /^[a-z]+$/.test(lw)){
+    // Only a real day name counts — otherwise "wedding" would be read as "wed".
+    if(/^(mon|tue|wed|thu|fri|sat|sun)$/.test(lw) ||
+       /^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/.test(lw)){
+      const dow = lw.slice(0,3);
       const now = new Date();
       let delta = (DOW[dow] - now.getDay() + 7) % 7;
       if(delta === 0) delta = 7;
@@ -769,7 +775,7 @@ function addTask(raw){
   if(!p.title) return false;
   const task = {
     id: uid(), title: p.title, project: p.project, priority: p.priority,
-    due: p.due, owedTo: p.owedTo, owner: p.owner, status: 'open', followups: [],
+    due: p.due, owner: p.owner, status: 'open', followups: [],
     created: nowISO(), updated: nowISO()
   };
   state.tasks.unshift(task);
@@ -784,10 +790,8 @@ function reveal(t){
   if(!matchesView(t, view)) view = 'open';
   const q = document.getElementById('search');
   const proj = document.getElementById('projFilter');
-  const owed = document.getElementById('owedFilter');
   if(q.value.trim()) q.value = '';
   if(proj.value && proj.value !== t.project) proj.value = '';
-  if(owed.value && owed.value !== (t.owedTo || '')) owed.value = '';
   const ownr = document.getElementById('ownerFilter');
   if(ownr.value && ownr.value !== (t.owner || '')) ownr.value = '';
   render();
@@ -805,20 +809,20 @@ function activeFilters(){
   return {
     q: document.getElementById('search').value.trim().toLowerCase(),
     proj: document.getElementById('projFilter').value,
-    owed: document.getElementById('owedFilter').value,
+
     owner: document.getElementById('ownerFilter').value
   };
 }
-function anyFilterActive(f){ return Boolean(f.q || f.proj || f.owed || f.owner); }
+function anyFilterActive(f){ return Boolean(f.q || f.proj || f.owner); }
 
 // Filters only — deliberately independent of the view, so the empty state can tell the
 // difference between "no such task" and "it exists but this view hides it".
 function matchesFilters(t, f){
   if(f.proj && t.project !== f.proj) return false;
-  if(f.owed && (t.owedTo || '') !== f.owed) return false;
+
   if(f.owner && (t.owner || '') !== f.owner) return false;
   if(f.q){
-    const hay = (t.title + ' ' + t.project + ' ' + (t.owedTo || '') + ' ' + (t.owner || '') + ' ' +
+      const hay = (t.title + ' ' + t.project + ' ' + (t.owner || '') + ' ' +
       (t.followups||[]).map(x => x.text + ' ' + (x.waitingOn||'')).join(' ')).toLowerCase();
     if(!hay.includes(f.q)) return false;
   }
@@ -861,25 +865,20 @@ function taskHTML(t, n){
   // ageing: how long it has existed, and — only if that differs — how long untouched
   const age = daysSince(t.created);
   const idle = daysSince(t.updated);
-  if(!done){
-    tags.push('<span class="tag age' + ageClass(age) + '" title="Added ' + esc((t.created||'').slice(0,10)) +
-      '">open ' + ageLabel(age) + '</span>');
-    if(isStale(t) && idle < age) tags.push('<span class="tag stale">untouched ' + ageLabel(idle) + '</span>');
+  // No "open N days" chip — only a nudge once something has genuinely gone quiet.
+  if(!done && isStale(t) && idle < age){
+    tags.push('<span class="tag stale">untouched ' + ageLabel(idle) + '</span>');
   }
-
-  // who this is owed to — editable in place
-  tags.push('<span class="tag owed' + (t.owedTo ? ' set' : '') + '">' +
-    '<span class="lbl">owed to</span>' +
-    '<span class="val" contenteditable="true" data-act="owedtext" data-ph="add name">' + esc(t.owedTo) + '</span>' +
-  '</span>');
   const nOpen = openFollowups(t).length;
   if(nOpen) tags.push('<span class="tag">' + nOpen + ' follow-up' + (nOpen > 1 ? 's' : '') + '</span>');
 
-  // Owner sits last in the row, on the right, where it reads as the accountable name.
-  tags.push('<span class="tag own' + (t.owner ? ' set' : '') + '">' +
+  // The owner rides on the title line rather than in the chip pile, so the accountable
+  // name is impossible to miss.
+  const ownerChip = '<span class="tag own titleown' + (t.owner ? ' set' : '') + '">' +
     '<span class="lbl">owner</span>' +
-    '<span class="val" contenteditable="true" data-act="ownertext" data-ph="add name">' + esc(t.owner) + '</span>' +
-  '</span>');
+    '<span class="val" contenteditable="true" data-act="ownertext" data-ph="add name">' +
+      esc(t.owner) + '</span>' +
+  '</span>';
 
   const fus = (t.followups || []).map(f => {
     const bits = [];
@@ -918,7 +917,10 @@ function taskHTML(t, n){
       '<span class="num">' + n + '.</span>' +
       '<span class="check" title="Status is set with the dropdown on the right">&#10003;</span>' +
       '<div class="main">' +
-        '<div class="title" contenteditable="true" data-act="title">' + esc(t.title) + '</div>' +
+        '<div class="titlerow">' +
+          '<div class="title" contenteditable="true" data-act="title">' + esc(t.title) + '</div>' +
+          ownerChip +
+        '</div>' +
         '<div class="meta">' + tags.join('') + '</div>' +
       '</div>' +
       '<div class="rowacts">' +
@@ -968,12 +970,6 @@ function renderFilters(){
     }).join('');
   sel.value = projects.includes(cur) ? cur : '';
 
-  const osel = document.getElementById('owedFilter');
-  const ocur = osel.value;
-  const people = [...new Set(state.tasks.map(t => t.owedTo).filter(Boolean))].sort();
-  osel.innerHTML = '<option value="">Owed to anyone</option>' +
-    people.map(p => '<option value="' + esc(p) + '">owed to ' + esc(p) + '</option>').join('');
-  osel.value = people.includes(ocur) ? ocur : '';
 
   const wsel = document.getElementById('ownerFilter');
   const wcur = wsel.value;
@@ -1042,7 +1038,7 @@ function emptyStateHTML(){
 function clearFilters(){
   document.getElementById('search').value = '';
   document.getElementById('projFilter').value = '';
-  document.getElementById('owedFilter').value = '';
+
   document.getElementById('ownerFilter').value = '';
   render();
 }
@@ -1062,7 +1058,7 @@ document.getElementById('views').addEventListener('click', e => {
 });
 document.getElementById('search').addEventListener('input', render);
 document.getElementById('projFilter').addEventListener('change', () => { sticky.clear(); render(); });
-document.getElementById('owedFilter').addEventListener('change', () => { sticky.clear(); render(); });
+
 document.getElementById('ownerFilter').addEventListener('change', () => { sticky.clear(); render(); });
 document.getElementById('sortBy').addEventListener('change', e => { sortBy = e.target.value; render(); });
 
@@ -1292,18 +1288,16 @@ list.addEventListener('submit', e => {
 list.addEventListener('blur', e => {
   const el = e.target;
   const act = el.dataset && el.dataset.act;
-  if(act !== 'title' && act !== 'futext' && act !== 'owedtext' && act !== 'ownertext') return;
+  if(act !== 'title' && act !== 'futext' && act !== 'ownertext') return;
   const art = el.closest('.task');
   const t = findTask(art.dataset.id);
   if(!t) return;
   const val = el.textContent.trim();
-  if(act === 'ownertext' || act === 'owedtext'){
+  if(act === 'ownertext'){
     // Deliberately no full render: rebuilding the list here would delete the sibling field
     // the user is on their way into, silently discarding whatever they type next.
-    const isOwner = act === 'ownertext';
-    const before = (isOwner ? t.owner : t.owedTo) || '';
-    if(val !== before){
-      if(isOwner) t.owner = val; else t.owedTo = val;
+    if(val !== (t.owner || '')){
+      t.owner = val;
       touch(t); save();
       const chip = el.closest('.tag');
       if(chip) chip.classList.toggle('set', Boolean(val));
@@ -1322,7 +1316,7 @@ list.addEventListener('blur', e => {
 
 list.addEventListener('keydown', e => {
   const act = e.target.dataset && e.target.dataset.act;
-  if((act === 'title' || act === 'futext' || act === 'owedtext' || act === 'ownertext') && e.key === 'Enter'){
+  if((act === 'title' || act === 'futext' || act === 'ownertext') && e.key === 'Enter'){
     e.preventDefault(); e.target.blur();
   }
 });
@@ -1370,7 +1364,7 @@ document.getElementById('copyBtn').onclick = () => {
     if(t.project) bits.push(tagInfo(t.project).label);
     if(t.priority) bits.push(PRIO[t.priority].label);
     if(t.owner) bits.push('owner ' + t.owner);
-    if(t.owedTo) bits.push('owed to ' + t.owedTo);
+
     if(t.due) bits.push('due ' + dueLabel(t.due));
     if(t.status !== 'done') bits.push('open ' + ageLabel(daysSince(t.created)));
     return '- ' + t.title + (bits.length ? '  (' + bits.join(', ') + ')' : '');
@@ -1431,15 +1425,15 @@ function seed(){
   const d = n => key(addDays(new Date(), n));
   const ago = n => new Date(Date.now() - n*86400000).toISOString();
   state.tasks = [
-    {id:uid(), title:'Send Q3 roadmap draft for review', project:'photos', priority:1, owedTo:'Priya', owner:'Me',
+    {id:uid(), title:'Send Q3 roadmap draft for review', project:'photos', priority:1, owner:'Me',
      due:d(1), status:'doing', created:ago(4), updated:ago(1),
      followups:[{id:uid(), text:'Chase sign-off after she reads it', waitingOn:'Priya', due:d(3), done:false, created:ago(1)}]},
-    {id:uid(), title:'Vendor contract renewal — confirm pricing', project:'catering', priority:2, owedTo:'Marcus', owner:'Marcus',
+    {id:uid(), title:'Vendor contract renewal — confirm pricing', project:'catering', priority:2, owner:'Marcus',
      due:d(-1), status:'blocked', created:ago(21), updated:ago(6),
      followups:[{id:uid(), text:'Ping procurement for the updated quote', waitingOn:'Procurement', due:d(0), done:false, created:ago(9)}]},
-    {id:uid(), title:'Write up findings from the customer interviews', project:'flowers', priority:2, owedTo:'Priya', owner:'Me',
+    {id:uid(), title:'Write up findings from the customer interviews', project:'flowers', priority:2, owner:'Me',
      due:d(4), status:'open', created:ago(9), updated:ago(2), followups:[]},
-    {id:uid(), title:'Book travel for the offsite', project:'church', priority:3, owedTo:'', owner:'Sam',
+    {id:uid(), title:'Book travel for the offsite', project:'church', priority:3, owner:'Sam',
      due:'', status:'open', created:ago(1), updated:ago(1),
      followups:[{id:uid(), text:'Confirm hotel block size with Sam', waitingOn:'Sam', due:d(2), done:false, created:ago(1)}]}
   ];
