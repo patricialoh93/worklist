@@ -179,6 +179,53 @@
   .tab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
   .hide{display:none}
 
+  /* budget */
+  .budtop{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;padding:12px;margin-bottom:10px}
+  .fld{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
+  .fld input{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    padding:8px 10px;color:var(--text);font:inherit;font-size:15px;width:150px}
+  .fld.cur input{width:64px}
+  .bar-wrap{flex:1;min-width:180px;height:9px;border-radius:999px;background:var(--panel-2);
+    overflow:hidden;border:1px solid var(--line)}
+  .bar-fill{height:100%;width:0;background:var(--ok);transition:width .3s}
+  .bar-fill.over{background:var(--danger)}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:11px 13px;display:flex;flex-direction:column;gap:3px}
+  .tile .tlabel{font-size:12px;color:var(--muted)}
+  .tile .tval{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+  .tile.ok .tval{color:var(--ok)}
+  .tile.warn .tval{color:var(--warn)}
+  .tile.bad .tval{color:var(--danger)}
+  .budadd{display:flex;gap:8px;padding:10px;flex-wrap:wrap;align-items:center}
+  .budadd input[type=text]{flex:1;min-width:170px}
+  .budadd input{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    padding:9px 11px;color:var(--text);font:inherit}
+  .budadd input[type=number]{width:112px}
+  .bgroup{padding:10px 12px;margin-bottom:8px}
+  .bghead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+    padding-bottom:7px;border-bottom:1px solid var(--line)}
+  .bgname{font-weight:600;font-size:14px}
+  .bgsub{font-variant-numeric:tabular-nums;color:var(--accent);font-weight:600;font-size:14px}
+  .brows{display:flex;flex-direction:column}
+  .brow{display:grid;grid-template-columns:minmax(120px,1fr) 104px 104px 104px auto;
+    gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+  .brow:last-child{border-bottom:none}
+  .brow.bhead{font-size:11.5px;color:var(--muted);padding:6px 0 4px;border-bottom:none}
+  .brow.bhead span:not(:first-child){text-align:right;padding-right:11px}
+  .bname{padding:3px 5px;border-radius:5px;word-break:break-word;font-size:14px}
+  .bname:focus{outline:none;background:var(--panel-2)}
+  .brow input[type=number]{background:transparent;border:1px solid transparent;border-radius:6px;
+    padding:5px 8px;color:var(--text);font:inherit;font-size:14px;text-align:right;
+    font-variant-numeric:tabular-nums;width:100%}
+  .brow input[type=number]:hover{border-color:var(--line)}
+  .brow input[type=number]:focus{outline:none;border-color:var(--accent);background:var(--panel-2)}
+  @media (max-width:620px){
+    .brow{grid-template-columns:1fr 1fr 1fr;grid-auto-rows:auto}
+    .brow .bname{grid-column:1 / -1}
+    .brow.bhead{display:none}
+  }
+
   /* recorder */
   .rec{padding:12px}
   .recrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -232,6 +279,7 @@
 
   <nav class="tabs">
     <button class="tab on" data-pane="tasks">Tasks</button>
+    <button class="tab" data-pane="budget">Budget</button>
     <button class="tab" data-pane="minutes">Meeting minutes</button>
   </nav>
 
@@ -276,6 +324,36 @@
     <span class="spacer"></span>
     <button id="clearDone">Clear completed</button>
   </footer>
+  </section>
+
+  <section id="budgetPane" class="hide">
+    <div class="card budtop">
+      <label class="fld">Total budget
+        <input type="number" id="bTotal" min="0" step="100" placeholder="e.g. 40000">
+      </label>
+      <label class="fld cur">Currency
+        <input type="text" id="bCur" maxlength="4" placeholder="$">
+      </label>
+      <div class="bar-wrap"><div class="bar-fill" id="bBar"></div></div>
+    </div>
+
+    <div class="tiles" id="bTiles"></div>
+
+    <form class="card budadd" id="bForm">
+      <input type="text" id="bName" placeholder="What is it — e.g. Florist deposit" required>
+      <select id="bTag"></select>
+      <input type="number" id="bEst" placeholder="Estimated" step="0.01" min="0">
+      <input type="number" id="bAct" placeholder="Actual" step="0.01" min="0">
+      <input type="number" id="bPaid" placeholder="Paid" step="0.01" min="0">
+      <button class="primary" type="submit">Add line</button>
+    </form>
+    <p class="hint">
+      <b>Estimated</b> is your guess, <b>Actual</b> is the agreed price once you know it,
+      <b>Paid</b> is what has actually left your account. Projected spend uses Actual where
+      you have it and Estimated where you don't.
+    </p>
+
+    <div id="bList"></div>
   </section>
 
   <section id="minutesPane" class="hide">
@@ -348,10 +426,11 @@ function load(){
     const raw = JSON.parse(localStorage.getItem(KEY));
     if(raw && Array.isArray(raw.tasks)){
       if(!Array.isArray(raw.minutes)) raw.minutes = [];  // added after the first release
+      if(!raw.budget || !Array.isArray(raw.budget.items)) raw.budget = newBudget();
       return raw;
     }
   }catch(e){}
-  return {tasks:[], minutes:[]};
+  return {tasks:[], minutes:[], budget:newBudget()};
 }
 // Never let a storage failure break the UI — keep working in memory and say so loudly.
 let storageOK = true;
@@ -376,10 +455,10 @@ function showStorageState(){
     el.classList.add('hide');
   } else {
     el.classList.remove('hide');
-    el.innerHTML = '<b>Your tasks are not being saved.</b> This browser is blocking storage for ' +
-      'this page, so anything you add will vanish when you reload. This normally means the app ' +
-      'is open in a preview or sandboxed window. Open it at its own address instead — the ' +
-      'Railway URL, or the index.html file itself — and your tasks will persist. ' +
+    el.innerHTML = '<b>Nothing you enter is being saved.</b> This browser is blocking storage for ' +
+      'this page, so tasks, budget lines and minutes will all vanish when you reload. This ' +
+      'normally means the app is open in a preview or sandboxed window. Open it at its own ' +
+      'address instead — the Railway URL, or the index.html file itself — and it will persist. ' +
       'Use <b>Export JSON</b> now if you want to keep what is on screen.';
     if(note) note.textContent = 'Not saving';
   }
@@ -1063,6 +1142,158 @@ function seed(){
   save(); render();
 }
 
+/* ================= budget ================= */
+function newBudget(){ return {total:0, currency:'$', items:[]}; }
+function num(v){ const n = parseFloat(v); return isFinite(n) ? n : 0; }
+function money(n){
+  const cur = (state.budget.currency || '');
+  return cur + num(n).toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2});
+}
+// Projected spend trusts Actual once it exists and falls back to Estimated.
+function lineProjected(it){ return it.actual !== '' && it.actual != null ? num(it.actual) : num(it.est); }
+
+function budgetTotals(){
+  const items = state.budget.items;
+  const est = items.reduce((s,i) => s + num(i.est), 0);
+  const projected = items.reduce((s,i) => s + lineProjected(i), 0);
+  const paid = items.reduce((s,i) => s + num(i.paid), 0);
+  return {est, projected, paid, outstanding: projected - paid,
+    budget: num(state.budget.total), left: num(state.budget.total) - projected, count: items.length};
+}
+
+function renderBudgetNumbers(){
+  const t = budgetTotals();
+  const tile = (label, value, cls) =>
+    '<div class="tile' + (cls ? ' ' + cls : '') + '"><span class="tlabel">' + label +
+    '</span><span class="tval">' + value + '</span></div>';
+  const overBy = -t.left;
+  document.getElementById('bTiles').innerHTML =
+    tile('Projected spend', money(t.projected)) +
+    tile('Paid so far', money(t.paid), 'ok') +
+    tile('Still to pay', money(t.outstanding), t.outstanding > 0 ? 'warn' : '') +
+    (t.budget
+      ? tile(t.left >= 0 ? 'Left in budget' : 'Over budget',
+             money(Math.abs(t.left >= 0 ? t.left : overBy)), t.left >= 0 ? 'ok' : 'bad')
+      : tile('Lines', String(t.count)));
+
+  // progress bar: how much of the projected spend is already paid
+  const pct = t.projected > 0 ? Math.min(100, (t.paid / t.projected) * 100) : 0;
+  const bar = document.getElementById('bBar');
+  bar.style.width = pct.toFixed(1) + '%';
+  bar.className = 'bar-fill' + (t.budget && t.left < 0 ? ' over' : '');
+  bar.title = pct.toFixed(0) + '% of projected spend paid';
+
+  // per-category subtotals, updated without rebuilding the inputs
+  document.querySelectorAll('[data-subtotal]').forEach(el2 => {
+    const key = el2.dataset.subtotal;
+    const rows = state.budget.items.filter(i => (i.tag || '') === key);
+    el2.textContent = money(rows.reduce((s,i) => s + lineProjected(i), 0));
+  });
+}
+
+function renderBudget(){
+  document.getElementById('bTotal').value = state.budget.total || '';
+  document.getElementById('bCur').value = state.budget.currency || '';
+
+  const sel = document.getElementById('bTag');
+  if(sel && !sel.options.length){
+    sel.innerHTML = '<option value="">No category</option>' +
+      TAGS.map(([k,l,i]) => '<option value="' + k + '">' + i + ' ' + l + '</option>').join('');
+  }
+
+  const list = document.getElementById('bList');
+  if(!state.budget.items.length){
+    list.innerHTML = '<div class="card empty">No budget lines yet. Add the first one above — ' +
+      'start with the big rocks: venue, catering, photos.</div>';
+    renderBudgetNumbers();
+    return;
+  }
+
+  // group by category, categories in TAGS order, uncategorised last
+  const order = TAGS.map(([k]) => k).concat(['']);
+  const groups = order
+    .map(k => [k, state.budget.items.filter(i => (i.tag || '') === k)])
+    .filter(([, rows]) => rows.length);
+
+  list.innerHTML = groups.map(([k, rows]) => {
+    const info = k ? tagInfo(k) : {icon:'🏷', label:'Uncategorised'};
+    return '<div class="card bgroup">' +
+      '<div class="bghead"><span class="bgname">' + info.icon + ' ' + esc(info.label) + '</span>' +
+        '<span class="bgsub" data-subtotal="' + esc(k) + '"></span></div>' +
+      '<div class="brows">' +
+        '<div class="brow bhead"><span>Line</span><span>Estimated</span><span>Actual</span>' +
+          '<span>Paid</span><span></span></div>' +
+        rows.map(it =>
+          '<div class="brow" data-bid="' + it.id + '">' +
+            '<span class="bname" contenteditable="true" data-bf="name">' + esc(it.name) + '</span>' +
+            '<input type="number" step="0.01" min="0" data-bf="est" value="' + esc(it.est) + '">' +
+            '<input type="number" step="0.01" min="0" data-bf="actual" value="' + esc(it.actual) + '">' +
+            '<input type="number" step="0.01" min="0" data-bf="paid" value="' + esc(it.paid) + '">' +
+            '<button class="del" data-bf="del">Delete</button>' +
+          '</div>').join('') +
+      '</div></div>';
+  }).join('');
+
+  renderBudgetNumbers();
+}
+
+document.getElementById('bForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = document.getElementById('bName').value.trim();
+  if(!name) return;
+  state.budget.items.push({
+    id: uid(), name,
+    tag: document.getElementById('bTag').value,
+    est: document.getElementById('bEst').value,
+    actual: document.getElementById('bAct').value,
+    paid: document.getElementById('bPaid').value,
+    created: nowISO()
+  });
+  save();
+  ['bName','bEst','bAct','bPaid'].forEach(id => { document.getElementById(id).value = ''; });
+  renderBudget();
+  document.getElementById('bName').focus();
+});
+
+document.getElementById('bTotal').addEventListener('change', e => {
+  state.budget.total = num(e.target.value); save(); renderBudgetNumbers();
+});
+document.getElementById('bCur').addEventListener('change', e => {
+  state.budget.currency = e.target.value.trim(); save(); renderBudget();
+});
+
+// Editing a figure updates the totals only — never rebuilds the rows, so tabbing between
+// the Estimated, Actual and Paid boxes cannot lose what you are typing.
+document.getElementById('bList').addEventListener('change', e => {
+  const row = e.target.closest('[data-bid]');
+  if(!row) return;
+  const it = state.budget.items.find(x => x.id === row.dataset.bid);
+  const f = e.target.dataset.bf;
+  if(!it || !f || f === 'del') return;
+  it[f] = e.target.value;
+  save(); renderBudgetNumbers();
+});
+
+document.getElementById('bList').addEventListener('blur', e => {
+  const row = e.target.closest('[data-bid]');
+  if(!row || e.target.dataset.bf !== 'name') return;
+  const it = state.budget.items.find(x => x.id === row.dataset.bid);
+  const v = e.target.textContent.trim();
+  if(!it) return;
+  if(!v){ renderBudget(); return; }
+  if(v !== it.name){ it.name = v; save(); }
+}, true);
+
+document.getElementById('bList').addEventListener('click', e => {
+  if(e.target.dataset.bf !== 'del') return;
+  const row = e.target.closest('[data-bid]');
+  const it = state.budget.items.find(x => x.id === row.dataset.bid);
+  if(!it) return;
+  if(!confirm('Delete this budget line permanently?\n\n' + it.name)) return;
+  state.budget.items = state.budget.items.filter(x => x.id !== it.id);
+  save(); renderBudget();
+});
+
 /* ================= meeting minutes ================= */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null;          // the SpeechRecognition instance
@@ -1270,9 +1501,11 @@ document.querySelector('.tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-pane]');
   if(!b) return;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t === b));
-  const minutes = b.dataset.pane === 'minutes';
-  el('tasksPane').classList.toggle('hide', minutes);
-  el('minutesPane').classList.toggle('hide', !minutes);
+  const pane = b.dataset.pane;
+  const PANES = {tasks:'tasksPane', budget:'budgetPane', minutes:'minutesPane'};
+  Object.keys(PANES).forEach(k => el(PANES[k]).classList.toggle('hide', k !== pane));
+  if(pane === 'budget') renderBudget();
+  const minutes = pane === 'minutes';
   if(minutes){
     if(!el('mDate').value) el('mDate').value = todayKey();
     if(!SR) micNote('This browser has no speech recognition — Chrome or Edge support it. You can still type notes.', true);
