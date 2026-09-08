@@ -48,7 +48,7 @@ const server = http.createServer((req, res) => {
 
   if(!authed(req)){
     return send(res, 401, 'Authentication required', {
-      'WWW-Authenticate': 'Basic realm="Worklist", charset="UTF-8"',
+      'WWW-Authenticate': 'Basic realm="Wedding", charset="UTF-8"',
       'Content-Type': 'text/plain'
     });
   }
@@ -81,5 +81,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log('Worklist listening on ' + PORT + (GATED ? ' (password protected)' : ' (public)'));
+  console.log('Wedding listening on ' + PORT + (GATED ? ' (password protected)' : ' (public)'));
 });

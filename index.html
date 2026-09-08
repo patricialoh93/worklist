@@ -3,28 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Worklist</title>
+<title>Wedding</title>
 <style>
   :root{
-    --bg:#f6f7f9; --panel:#ffffff; --panel-2:#f0f2f5; --line:#e2e5ea;
-    --text:#14181f; --muted:#6b7480; --accent:#2f6bd8; --accent-soft:#e6eefc;
-    --p1:#c62f2f; --p2:#c2761b; --p3:#5b6470;
-    --ok:#1f8a4c; --warn:#c2761b; --danger:#c62f2f; --wait:#7a4fc4; --own:#1b6f7d;
+    --bg:#fdf7f4; --panel:#fffdfc; --panel-2:#faeee9; --line:#efdbd3;
+    --text:#3c2a2d; --muted:#8c7175; --accent:#b0607c; --accent-soft:#fae7ee;
+    --p1:#bc3b5c; --p2:#bd8a3c; --p3:#8c7175;
+    --ok:#6a8f6b; --warn:#bd8a3c; --danger:#bc3b5c; --wait:#8a6fa8; --own:#4f7f8b;
     --radius:10px;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --bg:#12141a; --panel:#191c24; --panel-2:#20242e; --line:#2c313d;
-      --text:#e7eaf0; --muted:#98a1b0; --accent:#6fa0ff; --accent-soft:#1e2a44;
-      --p1:#ff7a7a; --p2:#ffb45e; --p3:#9aa4b2;
-      --ok:#57d18b; --warn:#ffb45e; --danger:#ff7a7a; --wait:#b498f5; --own:#63c8d8;
+      --bg:#1b1317; --panel:#251a1f; --panel-2:#2f2128; --line:#412e37;
+      --text:#f4e8ea; --muted:#b49aa2; --accent:#e79ab0; --accent-soft:#3b2530;
+      --p1:#ff8fa6; --p2:#e0b473; --p3:#b49aa2;
+      --ok:#8fbf90; --warn:#e0b473; --danger:#ff8fa6; --wait:#bfa3dd; --own:#86bcc7;
     }
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);
     font:15px/1.45 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
   .wrap{max-width:900px;margin:0 auto;padding:24px 18px 80px}
-  h1{font-size:20px;margin:0;letter-spacing:-.01em}
+  h1{font-size:23px;margin:0;font-family:Georgia,"Times New Roman",serif;font-weight:600;letter-spacing:.01em;color:var(--accent)}
   header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
   .sub{color:var(--muted);font-size:13px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
@@ -206,7 +206,7 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>Worklist</h1>
+    <h1>Wedding</h1>
     <span class="sub" id="stats"></span>
   </header>
 
@@ -219,7 +219,7 @@
 
   <section id="tasksPane">
   <div class="card add">
-    <input id="q" type="text" autocomplete="off" placeholder="New task — e.g. Draft Q3 review deck #reporting +Me @Priya !1 friday">
+    <input id="q" type="text" autocomplete="off" placeholder="New task — e.g. Confirm florist quote #flowers +Me @Mum !1 friday">
     <button class="primary" id="addBtn">Add</button>
   </div>
   <p class="hint">
@@ -248,7 +248,7 @@
   <div class="list" id="list"></div>
 
   <footer>
-    <button id="copyBtn">Copy stand-up summary</button>
+    <button id="copyBtn">Copy summary</button>
     <button id="exportBtn">Export JSON</button>
     <button id="importBtn">Import JSON</button>
     <input type="file" id="file" accept="application/json" hidden>
@@ -262,7 +262,7 @@
     <div class="card rec">
       <div class="recrow">
         <button class="primary mic" id="micBtn"><span class="dot"></span><span id="micLabel">Start recording</span></button>
-        <input type="text" id="mTitle" placeholder="Meeting title — e.g. Weekly ops sync">
+        <input type="text" id="mTitle" placeholder="Meeting title — e.g. Venue walkthrough">
         <input type="date" id="mDate">
       </div>
       <p class="micnote" id="micNote"></p>
@@ -821,7 +821,7 @@ document.getElementById('exportBtn').onclick = () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'worklist-' + todayKey() + '.json';
+  a.download = 'wedding-' + todayKey() + '.json';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 };
@@ -856,7 +856,7 @@ document.getElementById('copyBtn').onclick = () => {
     if(t.status !== 'done') bits.push('open ' + ageLabel(daysSince(t.created)));
     return '- ' + t.title + (bits.length ? '  (' + bits.join(', ') + ')' : '');
   };
-  const out = ['# Worklist — ' + todayKey(), ''];
+  const out = ['# Wedding — ' + todayKey(), ''];
   // Buckets are disjoint, in priority order: blocked wins over in-progress.
   const blocked = open.filter(t => t.status === 'blocked' || waitingOn(t).length);
   const doing = open.filter(t => t.status === 'doing' && !blocked.includes(t));
