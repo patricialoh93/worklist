@@ -45,6 +45,10 @@
   .wrap{max-width:940px;margin:0 auto;padding:34px 20px 96px}
 
   /* ---------- masthead ---------- */
+  .themebar{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-bottom:6px}
+  .themebar select{font-size:12.5px;padding:6px 10px;background:var(--panel)}
+  .swatch{width:14px;height:14px;border-radius:50%;flex:none;
+    background:var(--accent);border:1.5px solid var(--panel);box-shadow:0 0 0 1px var(--line)}
   header{text-align:center;margin-bottom:24px}
   h1{margin:0;font-family:var(--serif);font-weight:700;font-size:46px;line-height:1.05;
     color:var(--accent-deep)}
@@ -415,6 +419,10 @@
 </head>
 <body>
 <div class="wrap">
+  <div class="themebar">
+    <span class="swatch" id="palSwatch"></span>
+    <select id="paletteSel" title="Change the colour theme"></select>
+  </div>
   <header>
     <h1>Wedding</h1>
     <span class="sub" id="stats"></span>
@@ -467,7 +475,6 @@
     <button id="exportBtn">Export JSON</button>
     <button id="importBtn">Import JSON</button>
     <input type="file" id="file" accept="application/json" hidden>
-    <select id="paletteSel" title="Colour theme"></select>
     <span class="saved" id="savedNote"></span>
     <span class="spacer"></span>
     <button id="clearDone">Clear completed</button>
