@@ -44,6 +44,7 @@ set both of these variables in Railway (**Variables** tab) and redeploy:
 
 | Variable    | Value                |
 |-------------|----------------------|
+| `AUTH_ENABLED` | `1` to switch the gate on |
 | `AUTH_USER` | any username you pick |
 | `AUTH_PASS` | any password you pick |
 

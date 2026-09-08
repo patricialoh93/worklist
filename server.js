@@ -7,10 +7,11 @@ const path = require('path');
 const PORT = process.env.PORT || 3000;
 const ROOT = path.resolve(__dirname);
 
-// Optional password gate. Leave the env vars unset and the site is simply public.
+// Password gate, off by default. It now takes an explicit AUTH_ENABLED=1 as well as the
+// two credentials, so leftover AUTH_USER / AUTH_PASS variables cannot lock the site.
 const USER = process.env.AUTH_USER || '';
 const PASS = process.env.AUTH_PASS || '';
-const GATED = Boolean(USER && PASS);
+const GATED = process.env.AUTH_ENABLED === '1' && Boolean(USER && PASS);
 
 // Surfaced on /healthz so a deploy can be verified from outside without credentials.
 const VERSION = (process.env.RAILWAY_GIT_COMMIT_SHA || 'local').slice(0, 7);
