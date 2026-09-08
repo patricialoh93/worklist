@@ -231,18 +231,15 @@
   .priomenu small{color:var(--muted);margin-left:auto;font-size:11px}
 
   /* ---------- follow-ups ---------- */
-  /* Follow-ups sit in their own tinted tray so they read as a distinct group of
-     commitments rather than blending into the card. */
-  .fus{list-style:none;margin:12px 0 0 30px;padding:8px;display:flex;flex-direction:column;
-    gap:5px;background:color-mix(in srgb, var(--accent) 6%, var(--panel-2));
-    border:1px solid var(--line-soft);border-radius:11px}
+  /* Follow-ups: plain indented rows with a single hairline, nothing shouty. */
+  .fus{list-style:none;margin:10px 0 0 30px;padding:0;display:flex;flex-direction:column;gap:1px;
+    background:transparent;border:none}
   .fus:empty{display:none}
-  .fu{display:flex;gap:10px;align-items:center;font-size:13.3px;color:var(--text);
-    background:var(--panel);border:1px solid var(--line-soft);
-    border-left:3px solid var(--accent);padding:8px 11px;border-radius:8px;
-    transition:box-shadow .15s,border-color .15s;cursor:default}
-  .fu:hover{box-shadow:var(--shadow);border-left-color:var(--accent-deep)}
-  .fu.done{opacity:.5;border-left-color:var(--line)}
+  .fu{display:flex;gap:10px;align-items:center;font-size:13.3px;color:var(--text-soft);
+    background:transparent;border:none;border-left:2px solid var(--line);
+    padding:6px 6px 6px 12px;border-radius:0;transition:background .15s;cursor:default}
+  .fu:hover{background:var(--panel-2)}
+  .fu.done{opacity:.5}
   .fu.done .fu-text{text-decoration:line-through}
   .fu input[type=checkbox]{margin:0;accent-color:var(--ok);width:14px;height:14px;flex:none}
   .fu-text{flex:1;word-break:break-word;padding:0 2px}
