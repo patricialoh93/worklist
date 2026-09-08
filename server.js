@@ -68,14 +68,15 @@ const server = http.createServer((req, res) => {
       // Unknown path: hand back the app itself rather than a 404 page.
       return fs.readFile(path.join(ROOT, 'index.html'), (e2, home) => {
         if(e2) return send(res, 404, 'Not found', {'Content-Type': 'text/plain'});
-        send(res, 200, home, {'Content-Type': TYPES['.html'], 'Cache-Control': 'no-cache'});
+        send(res, 200, home, {'Content-Type': TYPES['.html'], 'Cache-Control': 'no-store, must-revalidate'});
       });
     }
     const ext = path.extname(target).toLowerCase();
     send(res, 200, data, {
       'Content-Type': TYPES[ext] || 'application/octet-stream',
       // The app is one file that changes when redeployed — always revalidate.
-      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600'
+      // no-store, not no-cache: the browser kept serving a stale page after redeploys
+      'Cache-Control': ext === '.html' ? 'no-store, must-revalidate' : 'public, max-age=3600'
     });
   });
 });
