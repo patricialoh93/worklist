@@ -225,7 +225,7 @@
     <button class="primary" id="addBtn">Add</button>
   </div>
   <p class="hint">
-    <code>#project</code> tags it &middot; <code>+name</code> is the owner &middot; <code>@name</code> is who you owe it to &middot;
+    <code>#project</code> tags it &middot; <code>+name</code> is who does it <code>+name</code> is the owner &middot; <code>@name</code> is who you owe it to &middot;middot; <code>@name</code> is who waits on it <code>+name</code> is the owner &middot; <code>@name</code> is who you owe it to &middot;middot;
     <code>!1</code>–<code>!3</code> sets importance (or click the &#9873; flag on any task) &middot;
     <code>today</code> / <code>tomorrow</code> / <code>fri</code> / <code>2026-09-01</code> sets a due date &middot;
     <code>/</code> jumps to search
@@ -235,8 +235,8 @@
     <nav class="views" id="views"></nav>
     <span class="spacer"></span>
     <select id="projFilter"><option value="">All projects</option></select>
-    <select id="ownerFilter"><option value="">Any owner</option></select>
-    <select id="owedFilter"><option value="">Anyone</option></select>
+    <select id="ownerFilter" title="Filter by who is doing the task"><option value="">Any owner</option></select>
+    <select id="owedFilter" title="Filter by who is waiting on the task"><option value="">Owed to anyone</option></select>
     <select id="sortBy">
       <option value="smart">Sort: due date</option>
       <option value="oldest">Sort: oldest first</option>
@@ -640,7 +640,7 @@ function renderFilters(){
   const osel = document.getElementById('owedFilter');
   const ocur = osel.value;
   const people = [...new Set(state.tasks.map(t => t.owedTo).filter(Boolean))].sort();
-  osel.innerHTML = '<option value="">Anyone</option>' +
+  osel.innerHTML = '<option value="">Owed to anyone</option>' +
     people.map(p => '<option value="' + esc(p) + '">owed to ' + esc(p) + '</option>').join('');
   osel.value = people.includes(ocur) ? ocur : '';
 
