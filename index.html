@@ -262,6 +262,39 @@
   .warn.hide{display:none}
   .warn b{color:var(--danger)}
 
+  /* ---------- checklist timeline ---------- */
+  .cltop{display:flex;gap:22px;align-items:flex-end;flex-wrap:wrap;padding:16px 18px;
+    margin-bottom:12px}
+  .cltop .fld input{width:172px;font-size:15px}
+  .clcount{font-family:var(--serif);font-size:22px;color:var(--accent-deep);padding-bottom:4px}
+  .clcount b{font-size:30px;font-weight:600}
+  .clhint{font-family:var(--sans);font-size:12.5px;color:var(--muted)}
+  .clprog{flex:1;min-width:200px;display:flex;flex-direction:column;gap:6px;padding-bottom:4px}
+  .clsec{margin-bottom:9px;overflow:hidden}
+  .clsec.allDone .clname{color:var(--muted)}
+  .clsec.allDone .clfrac{color:var(--ok);border-color:var(--ok)}
+  .clhead{display:flex;align-items:center;gap:11px;width:100%;border:none;background:transparent;
+    padding:14px 16px;border-radius:0;text-align:left}
+  .clhead:hover{background:var(--panel-2);border-color:transparent}
+  .chev{color:var(--muted);font-size:11px;width:12px;flex:none}
+  .clname{flex:1;font-family:var(--serif);font-size:19px;font-weight:600;color:var(--text)}
+  .clfrac{flex:none;font-size:11.5px;color:var(--muted);border:1px solid var(--line);
+    border-radius:999px;padding:3px 10px;font-variant-numeric:tabular-nums}
+  .clrows{display:flex;flex-direction:column;border-top:1px solid var(--line-soft)}
+  .clrow{display:flex;align-items:center;gap:11px;padding:11px 16px;cursor:pointer;
+    border-bottom:1px solid var(--line-soft);transition:background .15s}
+  .clrow:last-child{border-bottom:none}
+  .clrow:hover{background:var(--panel-2)}
+  .clrow input[type=checkbox]{width:17px;height:17px;flex:none;accent-color:var(--accent);margin:0}
+  .cltitle{flex:1;font-size:14.5px;word-break:break-word}
+  .clrow.done{background:var(--panel-2)}
+  .clrow.done .cltitle{text-decoration:line-through;color:var(--muted)}
+  .clrow.done .tag{opacity:.6}
+  .clwho{flex:none;font-size:11.5px;color:var(--own);border:1px solid var(--own);
+    border-radius:999px;padding:2px 9px}
+  .cldue{flex:none;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;
+    min-width:74px;text-align:right}
+
   /* ---------- budget ---------- */
   .budtop{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap;padding:16px 18px;
     margin-bottom:11px}
@@ -379,6 +412,7 @@
 
   <nav class="tabs">
     <button class="tab on" data-pane="tasks">Tasks</button>
+    <button class="tab" data-pane="checklist">Checklist</button>
     <button class="tab" data-pane="budget">Budget</button>
     <button class="tab" data-pane="minutes">Meeting minutes</button>
   </nav>
@@ -427,6 +461,20 @@
     <span class="spacer"></span>
     <button id="clearDone">Clear completed</button>
   </footer>
+  </section>
+
+  <section id="checklistPane" class="hide">
+    <div class="card cltop">
+      <label class="fld">Wedding date
+        <input type="date" id="wDate">
+      </label>
+      <div class="clcount" id="wCount"></div>
+      <div class="clprog">
+        <div class="bar-wrap"><div class="bar-fill" id="clBar"></div></div>
+        <span class="saved" id="clStat"></span>
+      </div>
+    </div>
+    <div id="clList"></div>
   </section>
 
   <section id="budgetPane" class="hide">
@@ -533,10 +581,12 @@ function load(){
     if(raw && Array.isArray(raw.tasks)){
       if(!Array.isArray(raw.minutes)) raw.minutes = [];  // added after the first release
       if(!raw.budget || !Array.isArray(raw.budget.items)) raw.budget = newBudget();
+      if(typeof raw.weddingDate !== "string") raw.weddingDate = "";
+      if(!Array.isArray(raw.collapsed)) raw.collapsed = [];
       return raw;
     }
   }catch(e){}
-  return {tasks:[], minutes:[], budget:newBudget()};
+  return {tasks:[], minutes:[], budget:newBudget(), weddingDate:'', collapsed:[]};
 }
 // Never let a storage failure break the UI — keep working in memory and say so loudly.
 let storageOK = true;
@@ -1396,6 +1446,120 @@ function seed(){
   save(); render();
 }
 
+/* ================= checklist timeline ================= */
+// Sections run from earliest planning to after the day, measured backwards from the wedding
+// date. maxDays is the upper bound of "days before the wedding" for that bucket.
+const PHASES = [
+  ['12m',  'More than 12 months before', Infinity],
+  ['9m',   '9 to 12 months before',      365],
+  ['6m',   '6 to 9 months before',       274],
+  ['4m',   '4 to 6 months before',       183],
+  ['2m',   '2 to 4 months before',       122],
+  ['1m',   '1 to 2 months before',       61],
+  ['2w',   '2 to 4 weeks before',        30],
+  ['1w',   'The final week',              6],
+  ['day',  'Wedding day',                 0],
+  ['after','After the wedding',         -1]
+];
+
+function phaseFor(t){
+  const wd = state.weddingDate;
+  const due = t.due;
+  if(!wd || !due) return 'none';
+  const days = Math.round((new Date(wd + 'T00:00:00') - new Date(due + 'T00:00:00')) / 86400000);
+  if(days < 0) return 'after';
+  for(let i = PHASES.length - 1; i >= 0; i--){
+    if(days <= PHASES[i][2]) return PHASES[i][0];
+  }
+  return '12m';
+}
+
+function daysToWedding(){
+  if(!state.weddingDate) return null;
+  const t = new Date(); t.setHours(0,0,0,0);
+  return Math.round((new Date(state.weddingDate + 'T00:00:00') - t) / 86400000);
+}
+
+function renderChecklist(){
+  document.getElementById('wDate').value = state.weddingDate || '';
+
+  const n = daysToWedding();
+  document.getElementById('wCount').innerHTML = n === null
+    ? '<span class="clhint">Set your date to lay the checklist out month by month</span>'
+    : (n > 0 ? '<b>' + n + '</b> day' + (n === 1 ? '' : 's') + ' to go'
+      : (n === 0 ? '<b>Today</b> is the day' : '<b>' + Math.abs(n) + '</b> days ago'));
+
+  const all = state.tasks;
+  const done = all.filter(t => t.status === 'done').length;
+  const pct = all.length ? (done / all.length) * 100 : 0;
+  document.getElementById('clBar').style.width = pct.toFixed(1) + '%';
+  document.getElementById('clStat').textContent = all.length
+    ? done + ' of ' + all.length + ' complete' : 'Nothing on the list yet';
+
+  const groups = PHASES.map(([k,label]) => [k, label, all.filter(t => phaseFor(t) === k)])
+    .concat([['none','No date yet', all.filter(t => phaseFor(t) === 'none')]])
+    .filter(([, , rows]) => rows.length);
+
+  const list = document.getElementById('clList');
+  if(!groups.length){
+    list.innerHTML = '<div class="card empty">No tasks yet. Add them on the ' +
+      '<b>Tasks</b> tab and they will slot into place here once they have a due date.</div>';
+    return;
+  }
+
+  list.innerHTML = groups.map(([k, label, rows]) => {
+    const rowsDone = rows.filter(t => t.status === 'done').length;
+    const complete = rowsDone === rows.length;
+    const shut = state.collapsed.indexOf(k) !== -1;
+    return '<section class="clsec card' + (complete ? ' allDone' : '') + '" data-phase="' + k + '">' +
+      '<button class="clhead" data-cl="toggle">' +
+        '<span class="chev">' + (shut ? '&#9656;' : '&#9662;') + '</span>' +
+        '<span class="clname">' + esc(label) + '</span>' +
+        '<span class="clfrac">' + rowsDone + '/' + rows.length + '</span>' +
+      '</button>' +
+      (shut ? '' : '<div class="clrows">' + rows.map(t => {
+        const ti = tagInfo(t.project);
+        return '<label class="clrow' + (t.status === 'done' ? ' done' : '') + '" data-tid="' + t.id + '">' +
+          '<input type="checkbox" data-cl="check"' + (t.status === 'done' ? ' checked' : '') + '>' +
+          '<span class="cltitle">' + esc(t.title) + '</span>' +
+          (ti ? '<span class="tag proj set" style="--tc:' + ti.color + '">' + ti.icon + ' ' +
+            esc(ti.label) + '</span>' : '') +
+          (t.owner ? '<span class="clwho">' + esc(t.owner) + '</span>' : '') +
+          (t.due ? '<span class="cldue">' + esc(dueLabel(t.due)) + '</span>' : '') +
+        '</label>';
+      }).join('') + '</div>') +
+    '</section>';
+  }).join('');
+}
+
+document.getElementById('wDate').addEventListener('change', e => {
+  state.weddingDate = e.target.value;
+  save();
+  renderChecklist();
+});
+
+document.getElementById('clList').addEventListener('click', e => {
+  const head = e.target.closest('[data-cl="toggle"]');
+  if(head){
+    const k = head.closest('[data-phase]').dataset.phase;
+    const i = state.collapsed.indexOf(k);
+    if(i === -1) state.collapsed.push(k); else state.collapsed.splice(i, 1);
+    save();
+    renderChecklist();
+  }
+});
+
+document.getElementById('clList').addEventListener('change', e => {
+  if(e.target.dataset.cl !== 'check') return;
+  const row = e.target.closest('[data-tid]');
+  const t = findTask(row.dataset.tid);
+  if(!t) return;
+  t.status = e.target.checked ? 'done' : 'open';
+  touch(t); save();
+  renderChecklist();
+  render();
+});
+
 /* ================= budget ================= */
 function newBudget(){ return {total:0, currency:'$', items:[]}; }
 function num(v){ const n = parseFloat(v); return isFinite(n) ? n : 0; }
@@ -1756,9 +1920,10 @@ document.querySelector('.tabs').addEventListener('click', e => {
   if(!b) return;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t === b));
   const pane = b.dataset.pane;
-  const PANES = {tasks:'tasksPane', budget:'budgetPane', minutes:'minutesPane'};
+  const PANES = {tasks:'tasksPane', checklist:'checklistPane', budget:'budgetPane', minutes:'minutesPane'};
   Object.keys(PANES).forEach(k => el(PANES[k]).classList.toggle('hide', k !== pane));
   if(pane === 'budget') renderBudget();
+  if(pane === 'checklist') renderChecklist();
   const minutes = pane === 'minutes';
   if(minutes){
     if(!el('mDate').value) el('mDate').value = todayKey();
