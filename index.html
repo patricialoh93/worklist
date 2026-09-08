@@ -615,6 +615,31 @@ function taskHTML(t, n){
   '</article>';
 }
 
+// Repopulating the dropdowns is separate from rebuilding the list, so an inline edit can
+// refresh the filters without destroying the field the user has moved focus into.
+function renderFilters(){
+  const sel = document.getElementById('projFilter');
+  const cur = sel.value;
+  const projects = [...new Set(state.tasks.map(t => t.project).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">All projects</option>' +
+    projects.map(p => '<option value="' + esc(p) + '">#' + esc(p) + '</option>').join('');
+  sel.value = projects.includes(cur) ? cur : '';
+
+  const osel = document.getElementById('owedFilter');
+  const ocur = osel.value;
+  const people = [...new Set(state.tasks.map(t => t.owedTo).filter(Boolean))].sort();
+  osel.innerHTML = '<option value="">Anyone</option>' +
+    people.map(p => '<option value="' + esc(p) + '">owed to ' + esc(p) + '</option>').join('');
+  osel.value = people.includes(ocur) ? ocur : '';
+
+  const wsel = document.getElementById('ownerFilter');
+  const wcur = wsel.value;
+  const owners = [...new Set(state.tasks.map(t => t.owner).filter(Boolean))].sort();
+  wsel.innerHTML = '<option value="">Any owner</option>' +
+    owners.map(p => '<option value="' + esc(p) + '">owner: ' + esc(p) + '</option>').join('');
+  wsel.value = owners.includes(wcur) ? wcur : '';
+}
+
 function render(){
   // views
   document.getElementById('views').innerHTML = VIEWS.map(([v,label]) => {
@@ -623,29 +648,7 @@ function render(){
       label + '<span class="n">' + n + '</span></button>';
   }).join('');
 
-  // project filter
-  const sel = document.getElementById('projFilter');
-  const cur = sel.value;
-  const projects = [...new Set(state.tasks.map(t => t.project).filter(Boolean))].sort();
-  sel.innerHTML = '<option value="">All projects</option>' +
-    projects.map(p => '<option value="' + esc(p) + '">#' + esc(p) + '</option>').join('');
-  sel.value = projects.includes(cur) ? cur : '';
-
-  // people this work is owed to
-  const osel = document.getElementById('owedFilter');
-  const ocur = osel.value;
-  const people = [...new Set(state.tasks.map(t => t.owedTo).filter(Boolean))].sort();
-  osel.innerHTML = '<option value="">Anyone</option>' +
-    people.map(p => '<option value="' + esc(p) + '">owed to ' + esc(p) + '</option>').join('');
-  osel.value = people.includes(ocur) ? ocur : '';
-
-  // owners of the work
-  const wsel = document.getElementById('ownerFilter');
-  const wcur = wsel.value;
-  const owners = [...new Set(state.tasks.map(t => t.owner).filter(Boolean))].sort();
-  wsel.innerHTML = '<option value="">Any owner</option>' +
-    owners.map(p => '<option value="' + esc(p) + '">owner: ' + esc(p) + '</option>').join('');
-  wsel.value = owners.includes(wcur) ? wcur : '';
+  renderFilters();
 
   // stats
   const open = state.tasks.filter(t => t.status !== 'done');
@@ -786,10 +789,18 @@ list.addEventListener('blur', e => {
   const t = findTask(art.dataset.id);
   if(!t) return;
   const val = el.textContent.trim();
-  if(act === 'ownertext'){
-    if(val !== (t.owner || '')){ t.owner = val; touch(t); save(); render(); }
-  } else if(act === 'owedtext'){
-    if(val !== (t.owedTo || '')){ t.owedTo = val; touch(t); save(); render(); }
+  if(act === 'ownertext' || act === 'owedtext'){
+    // Deliberately no full render: rebuilding the list here would delete the sibling field
+    // the user is on their way into, silently discarding whatever they type next.
+    const isOwner = act === 'ownertext';
+    const before = (isOwner ? t.owner : t.owedTo) || '';
+    if(val !== before){
+      if(isOwner) t.owner = val; else t.owedTo = val;
+      touch(t); save();
+      const chip = el.closest('.tag');
+      if(chip) chip.classList.toggle('set', Boolean(val));
+      renderFilters();
+    }
   } else if(act === 'title'){
     if(!val){ render(); return; }
     if(val !== t.title){ t.title = val; touch(t); save(); }
