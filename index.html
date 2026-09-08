@@ -426,7 +426,7 @@
 
   <section id="tasksPane">
   <div class="card add">
-    <input id="q" type="text" autocomplete="off" placeholder="New task — e.g. Confirm florist quote #flowers +Me @Mum !1 friday">
+    <input id="q" type="text" autocomplete="off" placeholder="New task — e.g. Confirm florist quote">
     <button class="primary" id="addBtn">Add</button>
   </div>
   <p class="hint">
@@ -442,6 +442,7 @@
   <div class="bar filters">
     <select id="projFilter" title="Filter by wedding category"><option value="">All categories</option></select>
     <select id="ownerFilter" title="Filter by who is doing the task"><option value="">Any owner</option></select>
+    <select id="waitFilter" title="Filter by who you are waiting on"><option value="">Waiting on anyone</option></select>
     <select id="sortBy">
       <option value="smart">Sort: due date</option>
       <option value="tag">Sort: category</option>
@@ -810,10 +811,11 @@ function activeFilters(){
     q: document.getElementById('search').value.trim().toLowerCase(),
     proj: document.getElementById('projFilter').value,
 
-    owner: document.getElementById('ownerFilter').value
+    owner: document.getElementById('ownerFilter').value,
+    wait: document.getElementById('waitFilter').value
   };
 }
-function anyFilterActive(f){ return Boolean(f.q || f.proj || f.owner); }
+function anyFilterActive(f){ return Boolean(f.q || f.proj || f.owner || f.wait); }
 
 // Filters only — deliberately independent of the view, so the empty state can tell the
 // difference between "no such task" and "it exists but this view hides it".
@@ -821,6 +823,8 @@ function matchesFilters(t, f){
   if(f.proj && t.project !== f.proj) return false;
 
   if(f.owner && (t.owner || '') !== f.owner) return false;
+  // "waiting on" comes from the follow-ups, which is where a person is recorded
+  if(f.wait && waitingOn(t).indexOf(f.wait) === -1) return false;
   if(f.q){
       const hay = (t.title + ' ' + t.project + ' ' + (t.owner || '') + ' ' +
       (t.followups||[]).map(x => x.text + ' ' + (x.waitingOn||'')).join(' ')).toLowerCase();
@@ -977,6 +981,14 @@ function renderFilters(){
   wsel.innerHTML = '<option value="">Any owner</option>' +
     owners.map(p => '<option value="' + esc(p) + '">owner: ' + esc(p) + '</option>').join('');
   wsel.value = owners.includes(wcur) ? wcur : '';
+
+  // everyone you are waiting on, gathered from the open follow-ups
+  const ksel = document.getElementById('waitFilter');
+  const kcur = ksel.value;
+  const pending = [...new Set(state.tasks.flatMap(t => waitingOn(t)))].sort();
+  ksel.innerHTML = '<option value="">Waiting on anyone</option>' +
+    pending.map(p => '<option value="' + esc(p) + '">waiting on ' + esc(p) + '</option>').join('');
+  ksel.value = pending.includes(kcur) ? kcur : '';
 }
 
 function render(){
@@ -1040,6 +1052,7 @@ function clearFilters(){
   document.getElementById('projFilter').value = '';
 
   document.getElementById('ownerFilter').value = '';
+  document.getElementById('waitFilter').value = '';
   render();
 }
 
@@ -1060,6 +1073,7 @@ document.getElementById('search').addEventListener('input', render);
 document.getElementById('projFilter').addEventListener('change', () => { sticky.clear(); render(); });
 
 document.getElementById('ownerFilter').addEventListener('change', () => { sticky.clear(); render(); });
+document.getElementById('waitFilter').addEventListener('change', () => { sticky.clear(); render(); });
 document.getElementById('sortBy').addEventListener('change', e => { sortBy = e.target.value; render(); });
 
 document.addEventListener('keydown', e => {
