@@ -194,7 +194,9 @@
   .lines .ln span{flex:1;word-break:break-word}
   .lines .ln button{flex:none;padding:2px 8px;font-size:12px}
   .lines .ln.added button{opacity:.5;pointer-events:none}
-  .empty{padding:36px 20px;text-align:center;color:var(--muted)}
+  .empty{padding:34px 20px;text-align:center;color:var(--muted);line-height:1.6}
+  .empty b{color:var(--text)}
+  .emptyacts{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap}
   footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px;font-size:13px;align-items:center}
   footer button{font-size:13px;padding:6px 10px}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);
@@ -502,23 +504,33 @@ function reveal(t){
 /* ---------- render ---------- */
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
+function activeFilters(){
+  return {
+    q: document.getElementById('search').value.trim().toLowerCase(),
+    proj: document.getElementById('projFilter').value,
+    owed: document.getElementById('owedFilter').value,
+    owner: document.getElementById('ownerFilter').value
+  };
+}
+function anyFilterActive(f){ return Boolean(f.q || f.proj || f.owed || f.owner); }
+
+// Filters only — deliberately independent of the view, so the empty state can tell the
+// difference between "no such task" and "it exists but this view hides it".
+function matchesFilters(t, f){
+  if(f.proj && t.project !== f.proj) return false;
+  if(f.owed && (t.owedTo || '') !== f.owed) return false;
+  if(f.owner && (t.owner || '') !== f.owner) return false;
+  if(f.q){
+    const hay = (t.title + ' ' + t.project + ' ' + (t.owedTo || '') + ' ' + (t.owner || '') + ' ' +
+      (t.followups||[]).map(x => x.text + ' ' + (x.waitingOn||'')).join(' ')).toLowerCase();
+    if(!hay.includes(f.q)) return false;
+  }
+  return true;
+}
+
 function visibleTasks(){
-  const q = document.getElementById('search').value.trim().toLowerCase();
-  const proj = document.getElementById('projFilter').value;
-  const owed = document.getElementById('owedFilter').value;
-  const owner = document.getElementById('ownerFilter').value;
-  return state.tasks.filter(t => {
-    if(!matchesView(t, view)) return false;
-    if(proj && t.project !== proj) return false;
-    if(owed && (t.owedTo || '') !== owed) return false;
-    if(owner && (t.owner || '') !== owner) return false;
-    if(q){
-      const hay = (t.title + ' ' + t.project + ' ' + (t.owedTo || '') + ' ' + (t.owner || '') + ' ' +
-        (t.followups||[]).map(f => f.text + ' ' + (f.waitingOn||'')).join(' ')).toLowerCase();
-      if(!hay.includes(q)) return false;
-    }
-    return true;
-  }).sort(sortTasks);
+  const f = activeFilters();
+  return state.tasks.filter(t => matchesView(t, view) && matchesFilters(t, f)).sort(sortTasks);
 }
 
 function taskHTML(t, n){
@@ -669,9 +681,39 @@ function render(){
   }
   document.getElementById('list').innerHTML = items.length
     ? items.map((t, i) => taskHTML(t, i + 1)).join('')
-    : '<div class="card empty">Nothing here.' +
-      (state.tasks.length ? '' : ' Add your first task above, or <button id="seed">load a sample list</button>.') +
-      '</div>';
+    : '<div class="card empty">' + emptyStateHTML() + '</div>';
+}
+
+// A blank list is nearly always one of three different situations. Say which.
+function emptyStateHTML(){
+  if(!state.tasks.length){
+    return 'Nothing here yet. Add your first task above, or <button id="seed">load a sample list</button>.';
+  }
+  const f = activeFilters();
+  const viewLabel = (VIEWS.find(v => v[0] === view) || ['', view])[1];
+  if(!anyFilterActive(f)){
+    return 'No tasks in <b>' + esc(viewLabel) + '</b>.';
+  }
+  // The filters match something — it is the view that is hiding it.
+  const elsewhere = state.tasks.filter(t => matchesFilters(t, f)).length;
+  if(elsewhere){
+    return 'Nothing matches in <b>' + esc(viewLabel) + '</b>, but ' + elsewhere +
+      ' task' + (elsewhere === 1 ? '' : 's') + ' elsewhere match' + (elsewhere === 1 ? 'es' : '') +
+      ' these filters — most likely completed.' +
+      '<div class="emptyacts"><button class="primary" id="showAllMatches">Show all ' + elsewhere +
+      ' matching task' + (elsewhere === 1 ? '' : 's') + '</button>' +
+      '<button id="clearFilters">Clear filters</button></div>';
+  }
+  return 'No tasks match these filters.' +
+    '<div class="emptyacts"><button id="clearFilters">Clear filters</button></div>';
+}
+
+function clearFilters(){
+  document.getElementById('search').value = '';
+  document.getElementById('projFilter').value = '';
+  document.getElementById('owedFilter').value = '';
+  document.getElementById('ownerFilter').value = '';
+  render();
 }
 
 /* ---------- events ---------- */
@@ -710,6 +752,8 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape') closeMenus();
 
 list.addEventListener('click', e => {
   if(e.target.id === 'seed'){ seed(); return; }
+  if(e.target.id === 'clearFilters'){ clearFilters(); return; }
+  if(e.target.id === 'showAllMatches'){ view = 'all'; render(); return; }
   const art = e.target.closest('.task');
   if(!art) return;
   const t = findTask(art.dataset.id);
