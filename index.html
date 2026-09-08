@@ -63,6 +63,7 @@
   .hide{display:none}
   .spacer{flex:1}
   .saved{color:var(--muted);font-size:12px}
+  .saved.bad{color:var(--danger)}
   button{font:inherit;font-weight:450;cursor:pointer;border-radius:var(--radius-sm);
     border:1px solid var(--line);background:var(--panel);color:var(--text-soft);padding:8px 13px;
     transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
@@ -607,50 +608,153 @@ let view = 'open';
 let sortBy = 'smart';
 let editingFuId = null;   // follow-up currently open for editing
 
+function blankState(){
+  return {tasks:[], minutes:[], budget:newBudget(), weddingDate:'', collapsed:[], palette:'taupe'};
+}
+
+// Fill in anything a document from an older version is missing.
+function normalize(raw){
+  if(!raw || !Array.isArray(raw.tasks)) return blankState();
+  if(!Array.isArray(raw.minutes)) raw.minutes = [];
+  if(!raw.budget || !Array.isArray(raw.budget.items)) raw.budget = newBudget();
+  if(typeof raw.weddingDate !== 'string') raw.weddingDate = '';
+  if(!Array.isArray(raw.collapsed)) raw.collapsed = [];
+  if(typeof raw.palette !== 'string') raw.palette = 'taupe';
+  return raw;
+}
+
 function load(){
   try{
-    const raw = JSON.parse(localStorage.getItem(KEY));
-    if(raw && Array.isArray(raw.tasks)){
-      if(!Array.isArray(raw.minutes)) raw.minutes = [];  // added after the first release
-      if(!raw.budget || !Array.isArray(raw.budget.items)) raw.budget = newBudget();
-      if(typeof raw.weddingDate !== "string") raw.weddingDate = "";
-      if(!Array.isArray(raw.collapsed)) raw.collapsed = [];
-      if(typeof raw.palette !== "string") raw.palette = "taupe";
-      return raw;
-    }
-  }catch(e){}
-  return {tasks:[], minutes:[], budget:newBudget(), weddingDate:'', collapsed:[], palette:'taupe'};
+    return normalize(JSON.parse(localStorage.getItem(KEY)));
+  }catch(e){
+    return blankState();
+  }
 }
 // Never let a storage failure break the UI — keep working in memory and say so loudly.
 let storageOK = true;
+/* ---------- sync ----------
+   The document lives on the server so everyone opening the link sees the same wedding.
+   localStorage is kept only as an offline cache and a first-run fallback. */
+const API = '/api/state';
+let serverRev = null;      // null until the first successful talk to the server
+let pushTimer = null;
+let pushing = false;
+let pendingEdits = false;  // local changes not yet accepted by the server
+
+function setSync(msg, bad){
+  const note = document.getElementById('savedNote');
+  if(!note) return;
+  note.textContent = msg;
+  note.classList.toggle('bad', Boolean(bad));
+}
+
 function save(){
+  // local cache first, so a dropped connection never loses the last edit
   try{
     localStorage.setItem(KEY, JSON.stringify(state));
     if(!storageOK){ storageOK = true; showStorageState(); }
-    const note = document.getElementById('savedNote');
-    if(note) note.textContent = 'Saved in this browser · ' + state.tasks.length + ' task' +
-      (state.tasks.length === 1 ? '' : 's');
   }catch(e){
     if(storageOK){ storageOK = false; showStorageState(); }
   }
+  pendingEdits = true;
+  setSync('Saving…');
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushState, 500);   // debounce bursts of typing
+}
+
+function adopt(raw){
+  state = normalize(raw);
+  if(!PALETTES[state.palette]) state.palette = 'taupe';
+  applyPalette();
+  render();
+  if(!document.getElementById('budgetPane').classList.contains('hide')) renderBudget();
+  if(!document.getElementById('checklistPane').classList.contains('hide')) renderChecklist();
+  if(!document.getElementById('minutesPane').classList.contains('hide')) renderMinutes();
+}
+
+function pushState(){
+  if(pushing){                       // a save is already in flight; try again shortly
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushState, 400);
+    return;
+  }
+  pushing = true;
+  fetch(API, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({rev: serverRev == null ? 0 : serverRev, state: state})
+  }).then(res => {
+    if(res.status === 409){
+      // Someone else saved first. Take their document rather than clobber it.
+      return res.json().then(srv => {
+        serverRev = srv.rev;
+        pendingEdits = false;
+        adopt(srv.state);
+        setSync('Updated from another device', true);
+        toast('Someone else had newer changes — showing theirs');
+      });
+    }
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json().then(j => {
+      serverRev = j.rev; showStorageState();
+      pendingEdits = false;
+      setSync('Saved for everyone · ' + state.tasks.length + ' task' +
+        (state.tasks.length === 1 ? '' : 's'));
+    });
+  }).catch(() => {
+    setSync('Offline — saved in this browser only', true);
+  }).then(() => { pushing = false; });
+}
+
+// Pick up other people's edits, but never while this browser has unsaved work.
+function pollState(){
+  if(pendingEdits || pushing || document.hidden) return;
+  fetch(API, {cache: 'no-store'}).then(r => r.json()).then(j => {
+    if(j.rev !== serverRev && j.state){
+      serverRev = j.rev; showStorageState();
+      adopt(j.state);
+      setSync('Updated · ' + state.tasks.length + ' task' + (state.tasks.length === 1 ? '' : 's'));
+    }
+  }).catch(() => {});
+}
+
+function boot(){
+  fetch(API, {cache: 'no-store'}).then(r => r.json()).then(j => {
+    serverRev = j.rev; showStorageState();
+    if(j.state && Array.isArray(j.state.tasks)){
+      adopt(j.state);
+      setSync('Shared list · ' + state.tasks.length + ' task' +
+        (state.tasks.length === 1 ? '' : 's'));
+    } else if(state.tasks.length || state.minutes.length || state.budget.items.length){
+      // Nothing on the server yet: seed it from whatever this browser already had.
+      pushState();
+      toast('Uploaded this browser’s list so everyone can see it');
+    } else {
+      setSync('Shared list · empty');
+    }
+  }).catch(() => {
+    setSync('Offline — saved in this browser only', true);
+  }).then(() => {
+    setInterval(pollState, 12000);
+  });
 }
 // A blocked-storage warning has to be permanent and unmissable — a toast is not enough,
 // because the consequence is silently losing every task you type.
+// The server is the real store now, so a blocked localStorage only costs the offline
+// cache. Warn only when both the server and local storage are unavailable.
 function showStorageState(){
   const el = document.getElementById('warn');
-  const note = document.getElementById('savedNote');
   if(!el) return;
-  if(storageOK){
+  const serverReachable = serverRev !== null;
+  if(storageOK || serverReachable){
     el.classList.add('hide');
-  } else {
-    el.classList.remove('hide');
-    el.innerHTML = '<b>Nothing you enter is being saved.</b> This browser is blocking storage for ' +
-      'this page, so tasks, budget lines and minutes will all vanish when you reload. This ' +
-      'normally means the app is open in a preview or sandboxed window. Open it at its own ' +
-      'address instead — the Railway URL, or the index.html file itself — and it will persist. ' +
-      'Use <b>Export JSON</b> now if you want to keep what is on screen.';
-    if(note) note.textContent = 'Not saving';
+    return;
   }
+  el.classList.remove('hide');
+  el.innerHTML = '<b>Nothing you enter is being saved.</b> The server cannot be reached and ' +
+    'this browser is blocking local storage too, so anything you add now will be lost on ' +
+    'reload. Check your connection, or use <b>Export JSON</b> to keep what is on screen.';
+  setSync('Not saving', true);
 }
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function nowISO(){ return new Date().toISOString(); }
@@ -2076,6 +2180,7 @@ document.querySelector('.tabs').addEventListener('click', e => {
 applyPalette();
 render();
 booted = true;
+boot();
 </script>
 </body>
 </html>
