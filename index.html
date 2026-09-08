@@ -1483,22 +1483,18 @@ const PALETTES = {
   blush: {name:'Blush & cream',
     light:{bg:'#fbf3ef','bg-tint':'#f6e5de',panel:'#ffffff','panel-2':'#f8ebe6',line:'#e8d2ca','line-soft':'#f2e2dc',text:'#372629','text-soft':'#5f4a4e',muted:'#8d7579',accent:'#b3486b','accent-deep':'#8e3253','accent-soft':'#fadde7',gold:'#c39b52'},
     dark:{bg:'#191216','bg-tint':'#22181d',panel:'#241a1f','panel-2':'#2e2229',line:'#42303a','line-soft':'#35262d',text:'#f5e8ec','text-soft':'#d3bcc3',muted:'#a88f97',accent:'#e894ae','accent-deep':'#f2acc2','accent-soft':'#3a2530',gold:'#cfa963'}},
-  // Deliberately dark in both modes — the whole point of it is the navy.
+  // Deliberately dark in both modes — the whole point of it is the navy. It therefore has
+  // to carry its own semantic colours: the defaults are mid-tones tuned for a light page
+  // and go muddy against navy.
   midnight: {name:'Midnight & gold',
-    light:{bg:'#2a3140','bg-tint':'#333c4e',panel:'#333c4d','panel-2':'#3c4658',line:'#4b5568','line-soft':'#424c60',text:'#f4efe6','text-soft':'#d5cec1',muted:'#a39c8f',accent:'#dfc58e','accent-deep':'#eed9ac','accent-soft':'#3a4356',gold:'#dfc58e','on-accent':'#28303e'},
-    dark:{bg:'#212836','bg-tint':'#29313f',panel:'#2b3342','panel-2':'#333c4d',line:'#434d60','line-soft':'#3a4356',text:'#f4efe6','text-soft':'#d5cec1',muted:'#a39c8f',accent:'#dfc58e','accent-deep':'#eed9ac','accent-soft':'#333c4d',gold:'#dfc58e','on-accent':'#212836'}},
+    light:{bg:'#2a3140','bg-tint':'#333c4e',panel:'#333c4d','panel-2':'#3c4658',line:'#556180','line-soft':'#46516a',text:'#f7f2e8','text-soft':'#ded7c9',muted:'#aaa495',accent:'#d9b978','accent-deep':'#ecd9a8','accent-soft':'#3d4759',gold:'#d9b978','on-accent':'#242b39',ok:'#8cc795',warn:'#e8bf6d',danger:'#fa8fa6',wait:'#bda6e8',own:'#84c8d8',p1:'#fa8fa6',p2:'#e8bf6d',p3:'#aaa495'},
+    dark:{bg:'#212836','bg-tint':'#29313f',panel:'#2b3342','panel-2':'#333c4d',line:'#4c5773','line-soft':'#3e4860',text:'#f7f2e8','text-soft':'#ded7c9',muted:'#aaa495',accent:'#d9b978','accent-deep':'#ecd9a8','accent-soft':'#333c4d',gold:'#d9b978','on-accent':'#1c2230',ok:'#8cc795',warn:'#e8bf6d',danger:'#fa8fa6',wait:'#bda6e8',own:'#84c8d8',p1:'#fa8fa6',p2:'#e8bf6d',p3:'#aaa495'}},
   taupe: {name:'Taupe & sage',
     light:{bg:'#efe9e1','bg-tint':'#e3dad0',panel:'#fdfbf8','panel-2':'#eae2d8',line:'#d5c9ba','line-soft':'#e5dcd1',text:'#312e29','text-soft':'#5b544b',muted:'#8a8074',accent:'#5f6f52','accent-deep':'#48563d','accent-soft':'#e2e8db',gold:'#a98f52'},
     dark:{bg:'#191713','bg-tint':'#221e19',panel:'#221f1a','panel-2':'#2b2720',line:'#413a2f','line-soft':'#332d25',text:'#f2ece3','text-soft':'#cfc5b7',muted:'#a19789',accent:'#a7bd93','accent-deep':'#bdd0aa','accent-soft':'#2a3125',gold:'#cbae6a'}},
   sage: {name:'Sage & linen',
     light:{bg:'#eef2ea','bg-tint':'#e0e8da',panel:'#ffffff','panel-2':'#e8eee3',line:'#cdd8c4','line-soft':'#dde5d6',text:'#212b24','text-soft':'#44523f',muted:'#6f7d69',accent:'#4a7c59','accent-deep':'#365f42','accent-soft':'#dceade',gold:'#a8913f'},
     dark:{bg:'#131711','bg-tint':'#1a2018',panel:'#1c221a','panel-2':'#242c22',line:'#374332','line-soft':'#2c3529',text:'#eaf1e7','text-soft':'#c2cebd',muted:'#95a48f',accent:'#7fc08f','accent-deep':'#9ad3a8','accent-soft':'#25352a',gold:'#c2ab5e'}},
-  navy: {name:'Navy & gold',
-    light:{bg:'#edf1f7','bg-tint':'#dce4f0',panel:'#ffffff','panel-2':'#e5ebf5',line:'#c6d1e4','line-soft':'#d9e1ee',text:'#131f36','text-soft':'#3a4761',muted:'#66738c',accent:'#1e3a6b','accent-deep':'#122a54','accent-soft':'#dbe4f5',gold:'#b8892f'},
-    dark:{bg:'#0f1420','bg-tint':'#161d2c',panel:'#182031','panel-2':'#20293c',line:'#334159','line-soft':'#28334a',text:'#e9eef8','text-soft':'#bcc7db',muted:'#8b99b3',accent:'#8fb0e8','accent-deep':'#adc6f2','accent-soft':'#1e2b45',gold:'#d0aa5f'}},
-  plum: {name:'Plum & mauve',
-    light:{bg:'#f3eef6','bg-tint':'#e7dcee',panel:'#ffffff','panel-2':'#ece4f1',line:'#d8c9e0','line-soft':'#e5daeb',text:'#281f31','text-soft':'#4d3f5c',muted:'#7a6b88',accent:'#6b3f8c','accent-deep':'#512c6d','accent-soft':'#ebdff3',gold:'#b8892f'},
-    dark:{bg:'#161120','bg-tint':'#1e172b',panel:'#201a2c','panel-2':'#292137',line:'#3f3350','line-soft':'#332941',text:'#f0e9f6','text-soft':'#cabfd6',muted:'#9d90ab',accent:'#bb92dd','accent-deep':'#cfaeea','accent-soft':'#2c2139',gold:'#cfa963'}},
   clay: {name:'Terracotta',
     light:{bg:'#fbf2eb','bg-tint':'#f4e2d3',panel:'#ffffff','panel-2':'#f7e9df',line:'#e7d0bd','line-soft':'#f0e0d3',text:'#33261d','text-soft':'#5c4838',muted:'#8a7361',accent:'#b0533a','accent-deep':'#8c3c26','accent-soft':'#f8e0d5',gold:'#bd8f3c'},
     dark:{bg:'#1a1310','bg-tint':'#231a15',panel:'#241b16','panel-2':'#2e231c',line:'#443328','line-soft':'#372a21',text:'#f5eae2','text-soft':'#d5c1b2',muted:'#a68e7c',accent:'#e79273','accent-deep':'#f0ac91','accent-soft':'#3a2620',gold:'#cfa963'}}
@@ -1507,6 +1503,9 @@ const PALETTES = {
 // Every token any palette touches, so applyPalette can reset the ones it does not set.
 const PAL_KEYS = [...new Set(Object.keys(PALETTES).reduce((acc, k) =>
   acc.concat(Object.keys(PALETTES[k].light), Object.keys(PALETTES[k].dark)), []))];
+
+// A palette that has since been removed must not leave the app themeless.
+if(!PALETTES[state.palette]) state.palette = 'taupe';
 
 const palSel = document.getElementById('paletteSel');
 palSel.innerHTML = Object.keys(PALETTES)
