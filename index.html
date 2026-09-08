@@ -171,7 +171,7 @@
   .tag.owed.set{color:var(--accent);border-color:var(--accent);border-style:solid;
     background:var(--accent-soft)}
   .tag.own.set{color:var(--own);border-color:var(--own);border-style:solid}
-  .tag.owed .lbl,.tag.own .lbl{opacity:.7;font-size:10.5px;letter-spacing:.05em;
+  .tag.owed .lbl,.tag.own .lbl{opacity:.88;font-size:10.5px;letter-spacing:.05em;
     text-transform:uppercase}
   .tag.owed .val,.tag.own .val{min-width:16px;padding:0 2px;border-radius:4px;font-weight:600;
     outline:none}
@@ -568,10 +568,26 @@ const TAGS = [
 ];
 const TAGMAP = {};
 TAGS.forEach(([k,l,i,c]) => { TAGMAP[k] = {label:l, icon:i, color:c}; });
+// The category hexes are mid-tones picked for a light page. On a dark ground they read as
+// muddy, so lift them towards white. Set whenever the palette is applied.
+let DARK_GROUND = false;
+
+function lighten(hex, amount){
+  const n = String(hex).replace('#','');
+  if(n.length !== 6) return hex;
+  const mix = i => {
+    const v = parseInt(n.substr(i, 2), 16);
+    return Math.round(v + (255 - v) * amount).toString(16).padStart(2, '0');
+  };
+  return '#' + mix(0) + mix(2) + mix(4);
+}
+
 // Anything typed by hand still works — it just gets a generic label and colour.
 function tagInfo(key){
   if(!key) return null;
-  return TAGMAP[String(key).toLowerCase()] || {label:key, icon:'🏷', color:'#948084'};
+  const base = TAGMAP[String(key).toLowerCase()] || {label:key, icon:'🏷', color:'#948084'};
+  if(!DARK_GROUND) return base;
+  return {label:base.label, icon:base.icon, color:lighten(base.color, 0.45)};
 }
 
 const PRIO = {
@@ -1487,8 +1503,8 @@ const PALETTES = {
   // to carry its own semantic colours: the defaults are mid-tones tuned for a light page
   // and go muddy against navy.
   midnight: {name:'Midnight & gold',
-    light:{bg:'#2a3140','bg-tint':'#333c4e',panel:'#333c4d','panel-2':'#3c4658',line:'#556180','line-soft':'#46516a',text:'#f7f2e8','text-soft':'#ded7c9',muted:'#aaa495',accent:'#d9b978','accent-deep':'#ecd9a8','accent-soft':'#3d4759',gold:'#d9b978','on-accent':'#242b39',ok:'#8cc795',warn:'#e8bf6d',danger:'#fa8fa6',wait:'#bda6e8',own:'#84c8d8',p1:'#fa8fa6',p2:'#e8bf6d',p3:'#aaa495'},
-    dark:{bg:'#212836','bg-tint':'#29313f',panel:'#2b3342','panel-2':'#333c4d',line:'#4c5773','line-soft':'#3e4860',text:'#f7f2e8','text-soft':'#ded7c9',muted:'#aaa495',accent:'#d9b978','accent-deep':'#ecd9a8','accent-soft':'#333c4d',gold:'#d9b978','on-accent':'#1c2230',ok:'#8cc795',warn:'#e8bf6d',danger:'#fa8fa6',wait:'#bda6e8',own:'#84c8d8',p1:'#fa8fa6',p2:'#e8bf6d',p3:'#aaa495'}},
+    light:{bg:'#2a3140','bg-tint':'#333c4e',panel:'#333c4d','panel-2':'#3c4658',line:'#556180','line-soft':'#46516a',text:'#ffffff','text-soft':'#e4e9f0',muted:'#c9c2b0',accent:'#eeb54a','accent-deep':'#f8ca5c','accent-soft':'#3d4759',gold:'#eeb54a','on-accent':'#242b39',ok:'#8cc795',warn:'#f0cb7c',danger:'#fa8fa6',wait:'#c8b4ef',own:'#8fd4e4',p1:'#fa8fa6',p2:'#f0cb7c',p3:'#c9c2b0'},
+    dark:{bg:'#212836','bg-tint':'#29313f',panel:'#2b3342','panel-2':'#333c4d',line:'#4c5773','line-soft':'#3e4860',text:'#ffffff','text-soft':'#e4e9f0',muted:'#c9c2b0',accent:'#eeb54a','accent-deep':'#f8ca5c','accent-soft':'#333c4d',gold:'#eeb54a','on-accent':'#1c2230',ok:'#8cc795',warn:'#f0cb7c',danger:'#fa8fa6',wait:'#c8b4ef',own:'#8fd4e4',p1:'#fa8fa6',p2:'#f0cb7c',p3:'#c9c2b0'}},
   taupe: {name:'Taupe & sage',
     light:{bg:'#efe9e1','bg-tint':'#e3dad0',panel:'#fdfbf8','panel-2':'#eae2d8',line:'#d5c9ba','line-soft':'#e5dcd1',text:'#312e29','text-soft':'#5b544b',muted:'#8a8074',accent:'#5f6f52','accent-deep':'#48563d','accent-soft':'#e2e8db',gold:'#a98f52'},
     dark:{bg:'#191713','bg-tint':'#221e19',panel:'#221f1a','panel-2':'#2b2720',line:'#413a2f','line-soft':'#332d25',text:'#f2ece3','text-soft':'#cfc5b7',muted:'#a19789',accent:'#a7bd93','accent-deep':'#bdd0aa','accent-soft':'#2a3125',gold:'#cbae6a'}},
@@ -1528,7 +1544,21 @@ function applyPalette(){
     else root.style.removeProperty('--' + k);
   });
   if(palSel.value !== state.palette) palSel.value = state.palette;
+
+  // Work out whether we are on a dark ground so the category colours can adapt.
+  const bg = (vars.bg || '').replace('#','');
+  if(bg.length === 6){
+    const ch = [0,2,4].map(i => parseInt(bg.substr(i,2), 16) / 255)
+      .map(v => v <= 0.03928 ? v/12.92 : Math.pow((v + 0.055)/1.055, 2.4));
+    DARK_GROUND = (0.2126*ch[0] + 0.7152*ch[1] + 0.0722*ch[2]) < 0.35;
+  }
+  if(booted){
+    render();
+    if(!document.getElementById('budgetPane').classList.contains('hide')) renderBudget();
+    if(!document.getElementById('checklistPane').classList.contains('hide')) renderChecklist();
+  }
 }
+let booted = false;
 
 if(window.matchMedia){
   const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -2045,6 +2075,7 @@ document.querySelector('.tabs').addEventListener('click', e => {
 
 applyPalette();
 render();
+booted = true;
 </script>
 </body>
 </html>
