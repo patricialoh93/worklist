@@ -586,7 +586,7 @@ function taskHTML(t, n){
           '<button class="flag p' + (t.priority || 0) + '" data-act="prio" ' +
             'title="Importance — ' + (t.priority ? PRIO[t.priority].label : 'not set') + '">' +
             '<span class="ico">' + (t.priority ? '&#9873;' : '&#9872;') + '</span>' +
-            (t.priority ? 'P' + t.priority : 'Set') +
+            (t.priority ? PRIO[t.priority].label : 'Set') +
           '</button>' +
           '<div class="priomenu">' +
             [1,2,3,0].map(p =>
@@ -849,7 +849,7 @@ document.getElementById('copyBtn').onclick = () => {
   const line = t => {
     const bits = [];
     if(t.project) bits.push('#' + t.project);
-    if(t.priority) bits.push('P' + t.priority);
+    if(t.priority) bits.push(PRIO[t.priority].label);
     if(t.owner) bits.push('owner ' + t.owner);
     if(t.owedTo) bits.push('owed to ' + t.owedTo);
     if(t.due) bits.push('due ' + dueLabel(t.due));
