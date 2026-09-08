@@ -9,7 +9,7 @@
     --bg:#f6f7f9; --panel:#ffffff; --panel-2:#f0f2f5; --line:#e2e5ea;
     --text:#14181f; --muted:#6b7480; --accent:#2f6bd8; --accent-soft:#e6eefc;
     --p1:#c62f2f; --p2:#c2761b; --p3:#5b6470;
-    --ok:#1f8a4c; --warn:#c2761b; --danger:#c62f2f; --wait:#7a4fc4;
+    --ok:#1f8a4c; --warn:#c2761b; --danger:#c62f2f; --wait:#7a4fc4; --own:#1b6f7d;
     --radius:10px;
   }
   @media (prefers-color-scheme: dark){
@@ -17,7 +17,7 @@
       --bg:#12141a; --panel:#191c24; --panel-2:#20242e; --line:#2c313d;
       --text:#e7eaf0; --muted:#98a1b0; --accent:#6fa0ff; --accent-soft:#1e2a44;
       --p1:#ff7a7a; --p2:#ffb45e; --p3:#9aa4b2;
-      --ok:#57d18b; --warn:#ffb45e; --danger:#ff7a7a; --wait:#b498f5;
+      --ok:#57d18b; --warn:#ffb45e; --danger:#ff7a7a; --wait:#b498f5; --own:#63c8d8;
     }
   }
   *{box-sizing:border-box}
@@ -57,10 +57,14 @@
   .task{padding:10px 12px}
   .task.done{opacity:.55}
   .top{display:flex;gap:10px;align-items:flex-start}
+  /* Status indicator, not a control — completing a task goes through the status dropdown
+     so a stray click can never close an item. */
   .check{width:19px;height:19px;flex:none;margin-top:2px;border-radius:50%;border:2px solid var(--line);
-    background:transparent;padding:0;line-height:1;color:transparent;font-size:12px}
-  .check:hover{border-color:var(--accent)}
+    background:transparent;padding:0;line-height:15px;color:transparent;font-size:12px;
+    display:inline-block;text-align:center;cursor:default;user-select:none}
   .task.done .check{background:var(--ok);border-color:var(--ok);color:#fff}
+  .num{flex:none;min-width:1.7em;margin-top:2px;text-align:right;color:var(--muted);
+    font-size:13px;font-variant-numeric:tabular-nums}
   .main{flex:1;min-width:0}
   .title{font-weight:550;word-break:break-word;padding:1px 3px;margin:-1px -3px;border-radius:5px}
   .title:focus{outline:none;background:var(--panel-2)}
@@ -87,6 +91,13 @@
   .tag.owed .val{min-width:16px;padding:0 2px;border-radius:3px;font-weight:600;outline:none}
   .tag.owed .val:focus{background:var(--panel-2);box-shadow:0 0 0 2px var(--accent-soft)}
   .tag.owed .val:empty::before{content:attr(data-ph);opacity:.55;font-weight:400}
+  /* owner chip — same mechanics, distinct colour so it never reads as "owed to" */
+  .tag.own{display:inline-flex;align-items:center;gap:5px;border-style:dashed}
+  .tag.own.set{color:var(--own);border-color:var(--own);border-style:solid}
+  .tag.own .lbl{opacity:.75}
+  .tag.own .val{min-width:16px;padding:0 2px;border-radius:3px;font-weight:600;outline:none}
+  .tag.own .val:focus{background:var(--panel-2);box-shadow:0 0 0 2px var(--accent-soft)}
+  .tag.own .val:empty::before{content:attr(data-ph);opacity:.55;font-weight:400}
   /* importance flag + picker */
   .flagwrap{position:relative;flex:none}
   .flag{display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:12.5px;
@@ -208,11 +219,11 @@
 
   <section id="tasksPane">
   <div class="card add">
-    <input id="q" type="text" autocomplete="off" placeholder="New task — e.g. Draft Q3 review deck #reporting @Priya !1 friday">
+    <input id="q" type="text" autocomplete="off" placeholder="New task — e.g. Draft Q3 review deck #reporting +Me @Priya !1 friday">
     <button class="primary" id="addBtn">Add</button>
   </div>
   <p class="hint">
-    <code>#project</code> tags it &middot; <code>@name</code> is who you owe it to &middot;
+    <code>#project</code> tags it &middot; <code>+name</code> is the owner &middot; <code>@name</code> is who you owe it to &middot;
     <code>!1</code>–<code>!3</code> sets importance (or click the &#9873; flag on any task) &middot;
     <code>today</code> / <code>tomorrow</code> / <code>fri</code> / <code>2026-09-01</code> sets a due date &middot;
     <code>/</code> jumps to search
@@ -222,6 +233,7 @@
     <nav class="views" id="views"></nav>
     <span class="spacer"></span>
     <select id="projFilter"><option value="">All projects</option></select>
+    <select id="ownerFilter"><option value="">Any owner</option></select>
     <select id="owedFilter"><option value="">Anyone</option></select>
     <select id="sortBy">
       <option value="smart">Sort: due date</option>
@@ -230,6 +242,7 @@
       <option value="newest">Sort: newest first</option>
     </select>
     <input class="mini" id="search" type="text" placeholder="Search…">
+    <span class="saved" id="showing"></span>
   </div>
 
   <div class="list" id="list"></div>
@@ -378,13 +391,14 @@ function ageClass(days){
 /* ---------- quick-add parsing ---------- */
 const DOW = {sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6};
 function parseInput(raw){
-  const t = {title:'', project:'', priority:0, due:'', owedTo:''};
+  const t = {title:'', project:'', priority:0, due:'', owedTo:'', owner:''};
   const words = raw.trim().split(/\s+/);
   const kept = [];
   for(const w of words){
     const lw = w.toLowerCase();
     if(/^#\S+$/.test(w)){ t.project = w.slice(1); continue; }
     if(/^@\S+$/.test(w)){ t.owedTo = w.slice(1); continue; }
+    if(/^\+\S+$/.test(w)){ t.owner = w.slice(1); continue; }
     if(/^![123]$/.test(w)){ t.priority = Number(w[1]); continue; }
     if(/^\d{4}-\d{2}-\d{2}$/.test(w)){ t.due = w; continue; }
     if(/^\d{1,2}\/\d{1,2}$/.test(w)){
@@ -456,7 +470,7 @@ function addTask(raw){
   if(!p.title) return false;
   const task = {
     id: uid(), title: p.title, project: p.project, priority: p.priority,
-    due: p.due, owedTo: p.owedTo, status: 'open', followups: [],
+    due: p.due, owedTo: p.owedTo, owner: p.owner, status: 'open', followups: [],
     created: nowISO(), updated: nowISO()
   };
   state.tasks.unshift(task);
@@ -475,6 +489,8 @@ function reveal(t){
   if(q.value.trim()) q.value = '';
   if(proj.value && proj.value !== t.project) proj.value = '';
   if(owed.value && owed.value !== (t.owedTo || '')) owed.value = '';
+  const ownr = document.getElementById('ownerFilter');
+  if(ownr.value && ownr.value !== (t.owner || '')) ownr.value = '';
   render();
   const el = document.querySelector('.task[data-id="' + t.id + '"]');
   if(el){
@@ -490,12 +506,14 @@ function visibleTasks(){
   const q = document.getElementById('search').value.trim().toLowerCase();
   const proj = document.getElementById('projFilter').value;
   const owed = document.getElementById('owedFilter').value;
+  const owner = document.getElementById('ownerFilter').value;
   return state.tasks.filter(t => {
     if(!matchesView(t, view)) return false;
     if(proj && t.project !== proj) return false;
     if(owed && (t.owedTo || '') !== owed) return false;
+    if(owner && (t.owner || '') !== owner) return false;
     if(q){
-      const hay = (t.title + ' ' + t.project + ' ' + (t.owedTo || '') + ' ' +
+      const hay = (t.title + ' ' + t.project + ' ' + (t.owedTo || '') + ' ' + (t.owner || '') + ' ' +
         (t.followups||[]).map(f => f.text + ' ' + (f.waitingOn||'')).join(' ')).toLowerCase();
       if(!hay.includes(q)) return false;
     }
@@ -503,7 +521,7 @@ function visibleTasks(){
   }).sort(sortTasks);
 }
 
-function taskHTML(t){
+function taskHTML(t, n){
   const done = t.status === 'done';
   const tags = [];
   if(t.project) tags.push('<span class="tag proj">#' + esc(t.project) + '</span>');
@@ -526,6 +544,10 @@ function taskHTML(t){
   }
 
   // who this is owed to — editable in place
+  tags.push('<span class="tag own' + (t.owner ? ' set' : '') + '">' +
+    '<span class="lbl">owner</span>' +
+    '<span class="val" contenteditable="true" data-act="ownertext" data-ph="add name">' + esc(t.owner) + '</span>' +
+  '</span>');
   tags.push('<span class="tag owed' + (t.owedTo ? ' set' : '') + '">' +
     '<span class="lbl">owed to</span>' +
     '<span class="val" contenteditable="true" data-act="owedtext" data-ph="add name">' + esc(t.owedTo) + '</span>' +
@@ -553,7 +575,8 @@ function taskHTML(t){
 
   return '<article class="task card' + (done ? ' done' : '') + '" data-id="' + t.id + '">' +
     '<div class="top">' +
-      '<button class="check" data-act="toggle" title="Complete">&#10003;</button>' +
+      '<span class="num">' + n + '.</span>' +
+      '<span class="check" title="Status is set with the dropdown on the right">&#10003;</span>' +
       '<div class="main">' +
         '<div class="title" contenteditable="true" data-act="title">' + esc(t.title) + '</div>' +
         '<div class="meta">' + tags.join('') + '</div>' +
@@ -616,17 +639,33 @@ function render(){
     people.map(p => '<option value="' + esc(p) + '">owed to ' + esc(p) + '</option>').join('');
   osel.value = people.includes(ocur) ? ocur : '';
 
+  // owners of the work
+  const wsel = document.getElementById('ownerFilter');
+  const wcur = wsel.value;
+  const owners = [...new Set(state.tasks.map(t => t.owner).filter(Boolean))].sort();
+  wsel.innerHTML = '<option value="">Any owner</option>' +
+    owners.map(p => '<option value="' + esc(p) + '">owner: ' + esc(p) + '</option>').join('');
+  wsel.value = owners.includes(wcur) ? wcur : '';
+
   // stats
   const open = state.tasks.filter(t => t.status !== 'done');
   const overdue = open.filter(t => { const n = daysUntil(nextDue(t)); return n !== null && n < 0; }).length;
   const fu = open.reduce((s,t) => s + openFollowups(t).length, 0);
   document.getElementById('stats').textContent =
+    state.tasks.length + ' task' + (state.tasks.length === 1 ? '' : 's') + ' total · ' +
     open.length + ' open · ' + fu + ' follow-up' + (fu === 1 ? '' : 's') + ' · ' + overdue + ' overdue';
 
   // list
   const items = visibleTasks();
+  // Numbers run 1..N over what is on screen, so say how that relates to the whole list.
+  const showing = document.getElementById('showing');
+  if(showing){
+    showing.textContent = items.length === state.tasks.length
+      ? (items.length ? 'Numbered 1–' + items.length + ' of ' + items.length : '')
+      : 'Showing ' + items.length + ' of ' + state.tasks.length + ' tasks';
+  }
   document.getElementById('list').innerHTML = items.length
-    ? items.map(taskHTML).join('')
+    ? items.map((t, i) => taskHTML(t, i + 1)).join('')
     : '<div class="card empty">Nothing here.' +
       (state.tasks.length ? '' : ' Add your first task above, or <button id="seed">load a sample list</button>.') +
       '</div>';
@@ -648,6 +687,7 @@ document.getElementById('views').addEventListener('click', e => {
 document.getElementById('search').addEventListener('input', render);
 document.getElementById('projFilter').addEventListener('change', render);
 document.getElementById('owedFilter').addEventListener('change', render);
+document.getElementById('ownerFilter').addEventListener('change', render);
 document.getElementById('sortBy').addEventListener('change', e => { sortBy = e.target.value; render(); });
 
 document.addEventListener('keydown', e => {
@@ -689,10 +729,7 @@ list.addEventListener('click', e => {
   }
   closeMenus();
 
-  if(act === 'toggle'){
-    t.status = t.status === 'done' ? 'open' : 'done';
-    touch(t); save(); render();
-  } else if(act === 'del'){
+  if(act === 'del'){
     // Deleting is the only way a task leaves the list, so make it deliberate.
     if(!confirm('Delete this task permanently?\n\n' + t.title +
       ((t.followups || []).length ? '\n\n' + t.followups.length + ' follow-up(s) will go with it.' : ''))) return;
@@ -744,12 +781,14 @@ list.addEventListener('submit', e => {
 list.addEventListener('blur', e => {
   const el = e.target;
   const act = el.dataset && el.dataset.act;
-  if(act !== 'title' && act !== 'futext' && act !== 'owedtext') return;
+  if(act !== 'title' && act !== 'futext' && act !== 'owedtext' && act !== 'ownertext') return;
   const art = el.closest('.task');
   const t = findTask(art.dataset.id);
   if(!t) return;
   const val = el.textContent.trim();
-  if(act === 'owedtext'){
+  if(act === 'ownertext'){
+    if(val !== (t.owner || '')){ t.owner = val; touch(t); save(); render(); }
+  } else if(act === 'owedtext'){
     if(val !== (t.owedTo || '')){ t.owedTo = val; touch(t); save(); render(); }
   } else if(act === 'title'){
     if(!val){ render(); return; }
@@ -764,7 +803,7 @@ list.addEventListener('blur', e => {
 
 list.addEventListener('keydown', e => {
   const act = e.target.dataset && e.target.dataset.act;
-  if((act === 'title' || act === 'futext' || act === 'owedtext') && e.key === 'Enter'){
+  if((act === 'title' || act === 'futext' || act === 'owedtext' || act === 'ownertext') && e.key === 'Enter'){
     e.preventDefault(); e.target.blur();
   }
 });
@@ -811,6 +850,7 @@ document.getElementById('copyBtn').onclick = () => {
     const bits = [];
     if(t.project) bits.push('#' + t.project);
     if(t.priority) bits.push('P' + t.priority);
+    if(t.owner) bits.push('owner ' + t.owner);
     if(t.owedTo) bits.push('owed to ' + t.owedTo);
     if(t.due) bits.push('due ' + dueLabel(t.due));
     if(t.status !== 'done') bits.push('open ' + ageLabel(daysSince(t.created)));
@@ -872,15 +912,15 @@ function seed(){
   const d = n => key(addDays(new Date(), n));
   const ago = n => new Date(Date.now() - n*86400000).toISOString();
   state.tasks = [
-    {id:uid(), title:'Send Q3 roadmap draft for review', project:'planning', priority:1, owedTo:'Priya',
+    {id:uid(), title:'Send Q3 roadmap draft for review', project:'planning', priority:1, owedTo:'Priya', owner:'Me',
      due:d(1), status:'doing', created:ago(4), updated:ago(1),
      followups:[{id:uid(), text:'Chase sign-off after she reads it', waitingOn:'Priya', due:d(3), done:false, created:ago(1)}]},
-    {id:uid(), title:'Vendor contract renewal — confirm pricing', project:'ops', priority:2, owedTo:'Marcus',
+    {id:uid(), title:'Vendor contract renewal — confirm pricing', project:'ops', priority:2, owedTo:'Marcus', owner:'Marcus',
      due:d(-1), status:'blocked', created:ago(21), updated:ago(6),
      followups:[{id:uid(), text:'Ping procurement for the updated quote', waitingOn:'Procurement', due:d(0), done:false, created:ago(9)}]},
-    {id:uid(), title:'Write up findings from the customer interviews', project:'research', priority:2, owedTo:'Priya',
+    {id:uid(), title:'Write up findings from the customer interviews', project:'research', priority:2, owedTo:'Priya', owner:'Me',
      due:d(4), status:'open', created:ago(9), updated:ago(2), followups:[]},
-    {id:uid(), title:'Book travel for the offsite', project:'admin', priority:3, owedTo:'',
+    {id:uid(), title:'Book travel for the offsite', project:'admin', priority:3, owedTo:'', owner:'Sam',
      due:'', status:'open', created:ago(1), updated:ago(1),
      followups:[{id:uid(), text:'Confirm hotel block size with Sam', waitingOn:'Sam', due:d(2), done:false, created:ago(1)}]}
   ];
