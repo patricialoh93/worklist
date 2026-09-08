@@ -16,7 +16,7 @@
     --accent:#9c2f57; --accent-deep:#7a1c40; --accent-soft:#f7dae6;
     --p1:#c2185b; --p2:#9a6410; --p3:#697285;
     --ok:#3d7a49; --warn:#9a6410; --danger:#c2185b; --wait:#6b4fa0; --own:#1c6172;
-    --gold:#b8892f;
+    --gold:#b8892f; --on-accent:#ffffff;
     --radius:14px; --radius-sm:9px;
     --shadow:0 1px 2px rgba(74,38,50,.04), 0 6px 18px -8px rgba(74,38,50,.10);
     --shadow-lift:0 2px 6px rgba(74,38,50,.06), 0 14px 32px -12px rgba(74,38,50,.18);
@@ -68,9 +68,9 @@
     transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
   button:hover{border-color:var(--accent);color:var(--accent);background:var(--panel-2)}
   button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500;
+  button.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:500;
     box-shadow:0 1px 2px rgba(120,50,75,.18)}
-  button.primary:hover{background:var(--accent-deep);border-color:var(--accent-deep);color:#fff}
+  button.primary:hover{background:var(--accent-deep);border-color:var(--accent-deep);color:var(--on-accent)}
   input,select,textarea{font:inherit;color:var(--text)}
   input[type=text],input[type=number],input[type=date],textarea{
     background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);
@@ -1475,6 +1475,10 @@ const PALETTES = {
   blush: {name:'Blush & cream',
     light:{bg:'#fbf3ef','bg-tint':'#f6e5de',panel:'#ffffff','panel-2':'#f8ebe6',line:'#e8d2ca','line-soft':'#f2e2dc',text:'#372629','text-soft':'#5f4a4e',muted:'#8d7579',accent:'#b3486b','accent-deep':'#8e3253','accent-soft':'#fadde7',gold:'#c39b52'},
     dark:{bg:'#191216','bg-tint':'#22181d',panel:'#241a1f','panel-2':'#2e2229',line:'#42303a','line-soft':'#35262d',text:'#f5e8ec','text-soft':'#d3bcc3',muted:'#a88f97',accent:'#e894ae','accent-deep':'#f2acc2','accent-soft':'#3a2530',gold:'#cfa963'}},
+  // Deliberately dark in both modes — the whole point of it is the navy.
+  midnight: {name:'Midnight & gold',
+    light:{bg:'#2a3140','bg-tint':'#333c4e',panel:'#333c4d','panel-2':'#3c4658',line:'#4b5568','line-soft':'#424c60',text:'#f4efe6','text-soft':'#d5cec1',muted:'#a39c8f',accent:'#dfc58e','accent-deep':'#eed9ac','accent-soft':'#3a4356',gold:'#dfc58e','on-accent':'#28303e'},
+    dark:{bg:'#212836','bg-tint':'#29313f',panel:'#2b3342','panel-2':'#333c4d',line:'#434d60','line-soft':'#3a4356',text:'#f4efe6','text-soft':'#d5cec1',muted:'#a39c8f',accent:'#dfc58e','accent-deep':'#eed9ac','accent-soft':'#333c4d',gold:'#dfc58e','on-accent':'#212836'}},
   taupe: {name:'Taupe & sage',
     light:{bg:'#efe9e1','bg-tint':'#e3dad0',panel:'#fdfbf8','panel-2':'#eae2d8',line:'#d5c9ba','line-soft':'#e5dcd1',text:'#312e29','text-soft':'#5b544b',muted:'#8a8074',accent:'#5f6f52','accent-deep':'#48563d','accent-soft':'#e2e8db',gold:'#a98f52'},
     dark:{bg:'#191713','bg-tint':'#221e19',panel:'#221f1a','panel-2':'#2b2720',line:'#413a2f','line-soft':'#332d25',text:'#f2ece3','text-soft':'#cfc5b7',muted:'#a19789',accent:'#a7bd93','accent-deep':'#bdd0aa','accent-soft':'#2a3125',gold:'#cbae6a'}},
@@ -1492,6 +1496,10 @@ const PALETTES = {
     dark:{bg:'#1a1310','bg-tint':'#231a15',panel:'#241b16','panel-2':'#2e231c',line:'#443328','line-soft':'#372a21',text:'#f5eae2','text-soft':'#d5c1b2',muted:'#a68e7c',accent:'#e79273','accent-deep':'#f0ac91','accent-soft':'#3a2620',gold:'#cfa963'}}
 };
 
+// Every token any palette touches, so applyPalette can reset the ones it does not set.
+const PAL_KEYS = [...new Set(Object.keys(PALETTES).reduce((acc, k) =>
+  acc.concat(Object.keys(PALETTES[k].light), Object.keys(PALETTES[k].dark)), []))];
+
 const palSel = document.getElementById('paletteSel');
 palSel.innerHTML = Object.keys(PALETTES)
   .map(k => '<option value="' + k + '">' + PALETTES[k].name + '</option>').join('');
@@ -1506,7 +1514,12 @@ function applyPalette(){
   const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const vars = dark ? p.dark : p.light;
   const root = document.documentElement;
-  Object.keys(vars).forEach(k => root.style.setProperty('--' + k, vars[k]));
+  // Clear any token the previous palette set but this one does not, so nothing leaks
+  // between themes — on-accent in particular, which only Midnight overrides.
+  PAL_KEYS.forEach(k => {
+    if(vars[k]) root.style.setProperty('--' + k, vars[k]);
+    else root.style.removeProperty('--' + k);
+  });
   if(palSel.value !== state.palette) palSel.value = state.palette;
 }
 
