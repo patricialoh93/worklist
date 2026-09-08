@@ -74,6 +74,24 @@
   .tag.p1{color:var(--p1);border-color:var(--p1)}
   .tag.p2{color:var(--p2);border-color:var(--p2)}
   .tag.p3{color:var(--p3)}
+  /* category chip + picker */
+  .tagwrap{position:relative;display:inline-flex}
+  button.tag.proj{padding:2px 8px;font-size:11.5px;line-height:1.5;border-style:dashed;
+    color:var(--muted);background:transparent}
+  button.tag.proj.set{color:var(--accent);border-color:var(--accent);border-style:solid;
+    background:var(--accent-soft)}
+  .tagmenu{position:absolute;left:0;top:calc(100% + 5px);z-index:30;display:none;
+    grid-template-columns:1fr 1fr;gap:2px;padding:5px;width:290px;max-height:290px;overflow:auto;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    box-shadow:0 10px 28px rgba(60,20,35,.18)}
+  .tagmenu.open{display:grid}
+  .tagmenu button{display:flex;align-items:center;gap:7px;border:none;background:transparent;
+    text-align:left;font-size:13px;padding:6px 7px;width:100%;border-radius:6px}
+  .tagmenu button:hover{background:var(--panel-2)}
+  .tagmenu button.sel{background:var(--accent-soft);color:var(--accent);font-weight:600}
+  .tagmenu button.wide{grid-column:1 / -1;color:var(--muted);border-top:1px solid var(--line);
+    border-radius:0;margin-top:3px;padding-top:8px}
+  .tagmenu .ico{font-size:14px;line-height:1;width:17px;text-align:center;flex:none}
   .tag.proj{color:var(--accent);border-color:var(--accent)}
   .tag.due.over{color:var(--danger);border-color:var(--danger)}
   .tag.due.soon{color:var(--warn);border-color:var(--warn)}
@@ -225,7 +243,7 @@
     <button class="primary" id="addBtn">Add</button>
   </div>
   <p class="hint">
-    <code>#project</code> tags it &middot; <code>+name</code> is who does it &middot; <code>@name</code> is who waits on it &middot;
+    <code>#church</code> sets a category (or click the <b>+ tag</b> chip) &middot; <code>+name</code> is who does it &middot; <code>@name</code> is who waits on it &middot;
     <code>!1</code>–<code>!3</code> sets importance (or click the &#9873; flag on any task) &middot;
     <code>today</code> / <code>tomorrow</code> / <code>fri</code> / <code>2026-09-01</code> sets a due date &middot;
     <code>/</code> jumps to search
@@ -234,7 +252,7 @@
   <div class="bar">
     <nav class="views" id="views"></nav>
     <span class="spacer"></span>
-    <select id="projFilter"><option value="">All projects</option></select>
+    <select id="projFilter" title="Filter by wedding category"><option value="">All categories</option></select>
     <select id="ownerFilter" title="Filter by who is doing the task"><option value="">Any owner</option></select>
     <select id="owedFilter" title="Filter by who is waiting on the task"><option value="">Owed to anyone</option></select>
     <select id="sortBy">
@@ -288,6 +306,27 @@
 <script>
 const KEY = 'worklist.v1';
 const STALE_DAYS = 3;
+// Wedding categories, in roughly the order things get planned.
+const TAGS = [
+  ['church','Church','⛪'],        ['reception','Reception','🥂'],
+  ['venue','Venue','🏛'],    ['catering','Catering','🍽'],
+  ['cake','Cake','🎂'],      ['flowers','Flowers','💐'],
+  ['attire','Attire','👰'],  ['beauty','Beauty','💄'],
+  ['rings','Rings','💍'],    ['photos','Photos','📷'],
+  ['music','Music','🎵'],    ['stationery','Stationery','✉'],
+  ['guests','Guests','👥'],  ['gifts','Gifts','🎁'],
+  ['transport','Transport','🚗'], ['honeymoon','Honeymoon','✈'],
+  ['budget','Budget','💰'],  ['vendors','Vendors','🤝'],
+  ['admin','Admin','📋']
+];
+const TAGMAP = {};
+TAGS.forEach(([k,l,i]) => { TAGMAP[k] = {label:l, icon:i}; });
+// Anything typed by hand still works — it just gets a generic label.
+function tagInfo(key){
+  if(!key) return null;
+  return TAGMAP[String(key).toLowerCase()] || {label:key, icon:'🏷'};
+}
+
 const PRIO = {
   1: {label:'Critical',  hint:'P1'},
   2: {label:'Important', hint:'P2'},
@@ -398,7 +437,7 @@ function parseInput(raw){
   const kept = [];
   for(const w of words){
     const lw = w.toLowerCase();
-    if(/^#\S+$/.test(w)){ t.project = w.slice(1); continue; }
+    if(/^#\S+$/.test(w)){ t.project = w.slice(1).toLowerCase(); continue; }
     if(/^@\S+$/.test(w)){ t.owedTo = w.slice(1); continue; }
     if(/^\+\S+$/.test(w)){ t.owner = w.slice(1); continue; }
     if(/^![123]$/.test(w)){ t.priority = Number(w[1]); continue; }
@@ -536,7 +575,21 @@ function visibleTasks(){
 function taskHTML(t, n){
   const done = t.status === 'done';
   const tags = [];
-  if(t.project) tags.push('<span class="tag proj">#' + esc(t.project) + '</span>');
+  // Category picker: preset wedding tags, a custom option, and a way to clear it.
+  const ti = tagInfo(t.project);
+  tags.push('<span class="tagwrap">' +
+    '<button class="tag proj' + (t.project ? ' set' : '') + '" data-act="tagpick" title="Category">' +
+      (ti ? ti.icon + ' ' + esc(ti.label) : '+ tag') +
+    '</button>' +
+    '<div class="tagmenu">' +
+      TAGS.map(([k,l,i]) =>
+        '<button data-tag="' + k + '"' +
+        (t.project && String(t.project).toLowerCase() === k ? ' class="sel"' : '') + '>' +
+        '<span class="ico">' + i + '</span>' + l + '</button>').join('') +
+      '<button data-tag="__custom" class="wide">Something else…</button>' +
+      (t.project ? '<button data-tag="" class="wide">Remove tag</button>' : '') +
+    '</div>' +
+  '</span>');
   if(t.due){
     const n = daysUntil(t.due);
     const cls = n < 0 ? ' over' : (n <= 1 ? ' soon' : '');
@@ -635,8 +688,11 @@ function renderFilters(){
   const sel = document.getElementById('projFilter');
   const cur = sel.value;
   const projects = [...new Set(state.tasks.map(t => t.project).filter(Boolean))].sort();
-  sel.innerHTML = '<option value="">All projects</option>' +
-    projects.map(p => '<option value="' + esc(p) + '">#' + esc(p) + '</option>').join('');
+  sel.innerHTML = '<option value="">All categories</option>' +
+    projects.map(p => {
+      const i = tagInfo(p);
+      return '<option value="' + esc(p) + '">' + i.icon + ' ' + esc(i.label) + '</option>';
+    }).join('');
   sel.value = projects.includes(cur) ? cur : '';
 
   const osel = document.getElementById('owedFilter');
@@ -746,10 +802,12 @@ document.addEventListener('keydown', e => {
 const list = document.getElementById('list');
 
 function closeMenus(){
-  document.querySelectorAll('.priomenu.open').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.priomenu.open, .tagmenu.open').forEach(m => m.classList.remove('open'));
 }
 // click anywhere else, or Esc, dismisses an open picker
-document.addEventListener('click', e => { if(!e.target.closest('.flagwrap')) closeMenus(); });
+document.addEventListener('click', e => {
+  if(!e.target.closest('.flagwrap') && !e.target.closest('.tagwrap')) closeMenus();
+});
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeMenus(); });
 
 list.addEventListener('click', e => {
@@ -761,6 +819,27 @@ list.addEventListener('click', e => {
   const t = findTask(art.dataset.id);
   if(!t) return;
   const act = e.target.closest('[data-act]') && e.target.closest('[data-act]').dataset.act;
+
+  // category picker
+  const tagBtn = e.target.closest('[data-tag]');
+  if(tagBtn){
+    let v = tagBtn.dataset.tag;
+    if(v === '__custom'){
+      const input = prompt('Category name:', t.project || '');
+      if(input === null) return;               // cancelled — leave it alone
+      v = input.trim().toLowerCase();
+    }
+    t.project = v;
+    touch(t); save(); render();
+    return;
+  }
+  if(act === 'tagpick'){
+    const menu = e.target.closest('.tagwrap').querySelector('.tagmenu');
+    const wasOpen = menu.classList.contains('open');
+    closeMenus();
+    if(!wasOpen) menu.classList.add('open');
+    return;
+  }
 
   // importance picker
   const pick = e.target.closest('[data-p]');
@@ -905,7 +984,7 @@ document.getElementById('copyBtn').onclick = () => {
   const doneRecently = state.tasks.filter(t => t.status === 'done' && daysSince(t.updated) <= 7);
   const line = t => {
     const bits = [];
-    if(t.project) bits.push('#' + t.project);
+    if(t.project) bits.push(tagInfo(t.project).label);
     if(t.priority) bits.push(PRIO[t.priority].label);
     if(t.owner) bits.push('owner ' + t.owner);
     if(t.owedTo) bits.push('owed to ' + t.owedTo);
@@ -969,15 +1048,15 @@ function seed(){
   const d = n => key(addDays(new Date(), n));
   const ago = n => new Date(Date.now() - n*86400000).toISOString();
   state.tasks = [
-    {id:uid(), title:'Send Q3 roadmap draft for review', project:'planning', priority:1, owedTo:'Priya', owner:'Me',
+    {id:uid(), title:'Send Q3 roadmap draft for review', project:'photos', priority:1, owedTo:'Priya', owner:'Me',
      due:d(1), status:'doing', created:ago(4), updated:ago(1),
      followups:[{id:uid(), text:'Chase sign-off after she reads it', waitingOn:'Priya', due:d(3), done:false, created:ago(1)}]},
-    {id:uid(), title:'Vendor contract renewal — confirm pricing', project:'ops', priority:2, owedTo:'Marcus', owner:'Marcus',
+    {id:uid(), title:'Vendor contract renewal — confirm pricing', project:'catering', priority:2, owedTo:'Marcus', owner:'Marcus',
      due:d(-1), status:'blocked', created:ago(21), updated:ago(6),
      followups:[{id:uid(), text:'Ping procurement for the updated quote', waitingOn:'Procurement', due:d(0), done:false, created:ago(9)}]},
-    {id:uid(), title:'Write up findings from the customer interviews', project:'research', priority:2, owedTo:'Priya', owner:'Me',
+    {id:uid(), title:'Write up findings from the customer interviews', project:'flowers', priority:2, owedTo:'Priya', owner:'Me',
      due:d(4), status:'open', created:ago(9), updated:ago(2), followups:[]},
-    {id:uid(), title:'Book travel for the offsite', project:'admin', priority:3, owedTo:'', owner:'Sam',
+    {id:uid(), title:'Book travel for the offsite', project:'church', priority:3, owedTo:'', owner:'Sam',
      due:'', status:'open', created:ago(1), updated:ago(1),
      followups:[{id:uid(), text:'Confirm hotel block size with Sam', waitingOn:'Sam', due:d(2), done:false, created:ago(1)}]}
   ];
