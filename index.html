@@ -455,6 +455,7 @@
     <select id="waitFilter" title="Filter by who you are waiting on"><option value="">Waiting on anyone</option></select>
     <select id="sortBy">
       <option value="smart">Sort: due date</option>
+      <option value="priority">Sort: importance</option>
       <option value="tag">Sort: category</option>
       <option value="manual">Sort: my own order</option>
       <option value="oldest">Sort: oldest first</option>
@@ -763,6 +764,13 @@ function tagRank(t){
 function sortTasks(a,b){
   // 'manual' keeps the order of state.tasks, which is what dragging rewrites.
   if(sortBy === 'manual') return 0;
+  if(sortBy === 'priority'){
+    // Critical, Important, Low, then anything with no flag set; soonest due breaks ties.
+    const d = (a.priority || 4) - (b.priority || 4);
+    if(d) return d;
+    const da = daysUntil(nextDue(a)), db = daysUntil(nextDue(b));
+    return (da === null ? 9999 : da) - (db === null ? 9999 : db);
+  }
   if(sortBy === 'tag'){
     const d = tagRank(a) - tagRank(b);
     if(d) return d;
