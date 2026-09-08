@@ -589,11 +589,11 @@ function load(){
       if(!raw.budget || !Array.isArray(raw.budget.items)) raw.budget = newBudget();
       if(typeof raw.weddingDate !== "string") raw.weddingDate = "";
       if(!Array.isArray(raw.collapsed)) raw.collapsed = [];
-      if(typeof raw.palette !== "string") raw.palette = "slate";
+      if(typeof raw.palette !== "string") raw.palette = "sage";
       return raw;
     }
   }catch(e){}
-  return {tasks:[], minutes:[], budget:newBudget(), weddingDate:'', collapsed:[], palette:'slate'};
+  return {tasks:[], minutes:[], budget:newBudget(), weddingDate:'', collapsed:[], palette:'sage'};
 }
 // Never let a storage failure break the UI — keep working in memory and say so loudly.
 let storageOK = true;
@@ -1490,7 +1490,7 @@ palSel.addEventListener('change', e => {
 });
 
 function applyPalette(){
-  const p = PALETTES[state.palette] || PALETTES.slate;
+  const p = PALETTES[state.palette] || PALETTES.sage;
   const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const vars = dark ? p.dark : p.light;
   const root = document.documentElement;
