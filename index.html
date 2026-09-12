@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#efe9e1">
+<meta name="apple-mobile-web-app-title" content="Wedding">
 <title>Wedding</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -398,20 +400,74 @@
   .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 
   @media (max-width:620px){
-    .wrap{padding:24px 14px 80px}
-    h1{font-size:34px}
-    /* let the buttons drop below the title instead of crushing it */
+    .wrap{padding:18px 12px 72px}
+    h1{font-size:32px}
+    header{margin-bottom:18px}
+    header .sub{font-size:11px;letter-spacing:.06em}
+
+    /* tabs scroll sideways rather than wrapping onto two lines */
+    .tabs{width:100%;justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;
+      -webkit-overflow-scrolling:touch;scrollbar-width:none;border-radius:12px}
+    .tabs::-webkit-scrollbar{display:none}
+    .tab{padding:9px 14px;font-size:13px;white-space:nowrap;flex:none}
+
+    /* the syntax cheatsheet is desktop noise on a phone — the pickers do the same job */
+    .hint{display:none}
+
+    .add{padding:10px;gap:8px}
+    .add input{font-size:16px;padding:11px 12px}   /* 16px stops iOS zooming on focus */
+
+    /* filters two-up instead of one per line */
+    .bar.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center}
+    .bar.filters select{width:100%;min-width:0}
+    .bar.filters #search{grid-column:1 / -1;width:100%;font-size:16px;padding:10px 12px}
+    .bar.filters #showing{grid-column:1 / -1;text-align:left}
+    .views{gap:3px}
+    .pill{padding:7px 11px}
+
+    /* a task: title on its own line, then owner, then the buttons */
+    .task{padding:12px 13px}
     .top{flex-wrap:wrap}
-    .rowacts{width:100%;margin-top:9px;justify-content:flex-start;flex-wrap:wrap}
-    .main{flex:1 1 60%}
-    .fus{margin-left:12px}
-    .fuform{padding-left:14px}
-    .tabs{width:100%;justify-content:space-between}
-    .tab{padding:8px 12px;font-size:12.5px}
+    .main{flex:1 1 auto;min-width:0}
+    .titlerow{flex-direction:column;align-items:flex-start;gap:7px}
+    .titleown{align-self:flex-start}
+    .rowacts{width:100%;margin-top:10px;justify-content:flex-start;flex-wrap:wrap;gap:7px}
+    .rowacts button,.rowacts select{flex:0 0 auto;min-height:38px}
+    .grip{display:none}                    /* dragging needs a mouse; reclaim the space */
+    .num{min-width:1.3em}
+
+    .fus{margin-left:10px}
+    .fuform{padding-left:10px}
+    .fu{flex-wrap:wrap;padding:8px 6px 8px 10px}
+    .fu input[type=checkbox]{width:18px;height:18px}
+    .fu-text{flex:1 1 100%}
+
+    /* budget: label on its own row, three figures beneath */
     .brow{grid-template-columns:1fr 1fr 1fr}
     .brow .bname{grid-column:1 / -1}
     .brow.bhead{display:none}
-    .tagmenu{width:270px}
+    .brow button.del{grid-column:1 / -1;justify-self:start}
+    .budadd input[type=number]{flex:1 1 0;width:auto;min-width:0}
+    .budadd input[type=text]{flex:1 1 100%;min-width:0}
+    .budadd select{flex:1 1 100%}
+    .budadd button{flex:1 1 100%;min-height:40px}
+    .budtop{gap:12px}
+    .fld input{width:100%}
+    .fld{flex:1 1 100%}
+    .tiles{grid-template-columns:1fr 1fr}
+
+    /* checklist */
+    .clhead{padding:12px 13px}
+    .clname{font-size:17px}
+    .clrow{padding:12px 13px;flex-wrap:wrap}
+    .cltitle{flex:1 1 70%}
+    .cldue{min-width:auto}
+    .cltop{gap:12px}
+
+    .tagmenu{width:min(78vw,280px)}
+    .themebar select{font-size:12px}
+    footer{gap:6px}
+    footer button{flex:1 1 auto}
   }
 </style>
 </head>
@@ -1648,6 +1704,9 @@ function applyPalette(){
     else root.style.removeProperty('--' + k);
   });
   if(palSel.value !== state.palette) palSel.value = state.palette;
+  // tint the phone browser chrome to match
+  const tc = document.querySelector('meta[name="theme-color"]');
+  if(tc && vars.bg) tc.setAttribute('content', vars.bg);
 
   // Work out whether we are on a dark ground so the category colours can adapt.
   const bg = (vars.bg || '').replace('#','');
