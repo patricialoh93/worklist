@@ -2078,6 +2078,8 @@ function renderCalDay(){
       return '<form class="dayadd' + (ed ? ' editing' : '') + '" id="evForm">' +
         '<input type="text" id="evTitle" placeholder="What is it — e.g. Church rehearsal" ' +
           'value="' + v('title') + '" required>' +
+        '<input type="date" id="evDate" title="Date — change this to move the entry" value="' +
+          (ed ? esc(ed.date) : esc(calSelected)) + '">' +
         '<input type="time" id="evTime" value="' + v('time') + '">' +
         '<select id="evKind">' +
           EVENT_KINDS.map(([k,l,i]) => '<option value="' + k + '"' +
@@ -2132,8 +2134,10 @@ document.getElementById('calDay').addEventListener('submit', e => {
   e.preventDefault();
   const title = document.getElementById('evTitle').value.trim();
   if(!title || !calSelected) return;
+  const chosen = document.getElementById('evDate').value || calSelected;
   const fields = {
     title,
+    date: chosen,
     time: document.getElementById('evTime').value,
     kind: document.getElementById('evKind').value,
     where: document.getElementById('evWhere').value.trim(),
@@ -2141,15 +2145,37 @@ document.getElementById('calDay').addEventListener('submit', e => {
     note: document.getElementById('evNote').value.trim()
   };
   state.events = state.events || [];
+
+  // Changing the date moves the entry, so follow it to wherever it landed.
+  const moved = chosen !== calSelected;
+  if(moved){
+    const [yy,mm] = chosen.split('-').map(Number);
+    calSelected = chosen;
+    calCursor = new Date(yy, mm - 1, 1);
+  }
+
   if(editingEvId){
     const ev = state.events.find(x => x.id === editingEvId);
     if(ev) Object.assign(ev, fields, {updated: nowISO()});
     editingEvId = null;
-    save(); renderCalendar(); toast('Entry updated');
+    save(); renderCalendar();
+    toast(moved ? 'Moved to ' + chosen : 'Entry updated');
   } else {
-    state.events.push(Object.assign({id: uid(), date: calSelected, created: nowISO()}, fields));
-    save(); renderCalendar(); toast('Added to ' + calSelected);
+    state.events.push(Object.assign({id: uid(), created: nowISO()}, fields));
+    save(); renderCalendar();
+    toast('Added to ' + chosen);
   }
+});
+
+// Keep the button honest when the date is changed before saving.
+document.getElementById('calDay').addEventListener('change', e => {
+  if(e.target.id !== 'evDate') return;
+  const btn = document.querySelector('#evForm button.primary');
+  if(!btn || editingEvId) return;
+  const val = e.target.value;
+  if(!val){ btn.textContent = 'Add booking'; return; }
+  const [yy,mm,dd] = val.split('-').map(Number);
+  btn.textContent = 'Add to ' + dd + ' ' + MONTHS[mm-1] + ' ' + yy;
 });
 
 document.getElementById('calDay').addEventListener('click', e => {
