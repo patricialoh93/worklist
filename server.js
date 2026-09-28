@@ -126,10 +126,16 @@ const server = http.createServer((req, res) => {
   const urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
 
   // Health check stays open so Railway can probe it without credentials.
-  // Reports the data directory too, so it is possible to tell from outside whether a
-  // durable volume is mounted or the ephemeral fallback is in use.
+  // A mounted volume sits on its own filesystem, so its device id differs from the root
+  // filesystem's. Reporting the directory alone proved useless: without a volume the
+  // server simply creates /data inside the container and it looks identical from outside.
   if(urlPath === '/healthz'){
-    return send(res, 200, 'ok ' + VERSION + ' data=' + DATA_DIR, {'Content-Type': 'text/plain'});
+    let mount = 'unknown';
+    try{
+      mount = fs.statSync(DATA_DIR).dev !== fs.statSync('/').dev ? 'volume' : 'EPHEMERAL';
+    }catch(e){ mount = 'error'; }
+    return send(res, 200, 'ok ' + VERSION + ' data=' + DATA_DIR + ' storage=' + mount,
+      {'Content-Type': 'text/plain'});
   }
 
   if(!authed(req)){
