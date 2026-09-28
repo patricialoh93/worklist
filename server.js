@@ -126,7 +126,11 @@ const server = http.createServer((req, res) => {
   const urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
 
   // Health check stays open so Railway can probe it without credentials.
-  if(urlPath === '/healthz') return send(res, 200, 'ok ' + VERSION, {'Content-Type': 'text/plain'});
+  // Reports the data directory too, so it is possible to tell from outside whether a
+  // durable volume is mounted or the ephemeral fallback is in use.
+  if(urlPath === '/healthz'){
+    return send(res, 200, 'ok ' + VERSION + ' data=' + DATA_DIR, {'Content-Type': 'text/plain'});
+  }
 
   if(!authed(req)){
     return send(res, 401, 'Authentication required', {
