@@ -307,6 +307,17 @@
   .calchip.fu{background:color-mix(in srgb, var(--wait) 15%, transparent);color:var(--wait)}
   .calmore{font-size:9.5px;color:var(--muted)}
 
+  .bksum{margin-bottom:10px}
+  .bkstat{font-size:13.5px;color:var(--text-soft)}
+  .bkstat b{color:var(--accent-deep);font-size:15px}
+  .bkrow{gap:11px;flex-wrap:wrap}
+  .bkrow .cltitle{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .bkmeta{display:flex;align-items:center;gap:6px;margin-left:auto;flex:none;flex-wrap:wrap}
+  .bkrow.past{opacity:.5}
+  .bkday{flex:none;display:flex;flex-direction:column;align-items:center;min-width:34px;
+    line-height:1.15}
+  .bkday b{font-size:15px;font-variant-numeric:tabular-nums}
+  .bkday span{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
   .daypanel{padding:14px 16px;margin-top:10px}
   .dayhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
   .dayhead h3{margin:0;font-family:var(--serif);font-size:20px;font-weight:600}
@@ -549,6 +560,7 @@
     <button class="tab on" data-pane="tasks">Tasks</button>
     <button class="tab" data-pane="checklist">Checklist</button>
     <button class="tab" data-pane="calendar">Calendar</button>
+    <button class="tab" data-pane="bookings">Bookings</button>
     <button class="tab" data-pane="budget">Budget</button>
     <button class="tab" data-pane="minutes">Meeting minutes</button>
   </nav>
@@ -617,6 +629,10 @@
       <div class="calgrid" id="calGrid"></div>
     </div>
     <div id="calDay"></div>
+  </section>
+
+  <section id="bookingsPane" class="hide">
+    <div id="calList"></div>
   </section>
 
   <section id="checklistPane" class="hide">
@@ -1875,6 +1891,97 @@ function followupsDueOn(k){
   return out;
 }
 
+const DOW_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// Every booking in one chronological list, so the whole run-up reads at a glance
+// instead of month by month.
+function renderCalList(){
+  const host = document.getElementById('calList');
+  const all = (state.events || []).slice().sort((a,b) =>
+    (a.date + (a.time || '99:99')).localeCompare(b.date + (b.time || '99:99')));
+  const today = todayKey();
+
+  if(!all.length){
+    host.innerHTML = '<div class="card empty">No bookings yet. Open the <b>Calendar</b> tab, ' +
+      'click a day and add your first rehearsal or appointment.</div>';
+    return;
+  }
+
+  // Grouped by month, newest work first, in the same shape as the checklist.
+  const months = [];
+  const byMonth = {};
+  all.forEach(e => {
+    const mk = e.date.slice(0, 7);
+    if(!byMonth[mk]){ byMonth[mk] = []; months.push(mk); }
+    byMonth[mk].push(e);
+  });
+
+  const row = e => {
+    const [yy,mm,dd] = e.date.split('-').map(Number);
+    const wd = DOW_SHORT[new Date(yy, mm-1, dd).getDay()];
+    const n = daysUntil(e.date);
+    const when = n === 0 ? 'today' : (n === 1 ? 'tomorrow'
+      : (n > 0 && n <= 30 ? 'in ' + n + 'd' : ''));
+    return '<div class="clrow bkrow' + (e.date < today ? ' past' : '') + '" data-ev="' + e.id +
+      '" title="Double-click to edit">' +
+      '<span class="bkday"><b>' + dd + '</b><span>' + wd + '</span></span>' +
+      '<span class="dico">' + kindInfo(e.kind).icon + '</span>' +
+      '<span class="cltitle">' + esc(e.title) +
+        ((e.where || e.who || e.note)
+          ? '<span class="dnote">' + [e.where, e.who, e.note].filter(Boolean).map(esc).join(' · ') + '</span>'
+          : '') + '</span>' +
+      '<span class="bkmeta">' +
+        (e.time ? '<span class="tag">' + esc(e.time) + '</span>' : '') +
+        (when ? '<span class="tag due soon">' + when + '</span>' : '') +
+        '<span class="tag">' + esc(kindInfo(e.kind).label) + '</span>' +
+        '<button class="icon" data-ev-edit="' + e.id + '" title="Edit">&#9998;</button>' +
+        '<button class="icon" data-ev-del="' + e.id + '" title="Delete">&times;</button>' +
+      '</span>' +
+    '</div>';
+  };
+
+  const upcoming = all.filter(e => e.date >= today).length;
+  host.innerHTML =
+    '<div class="card calbar bksum">' +
+      '<span class="bkstat"><b>' + all.length + '</b> booking' + (all.length === 1 ? '' : 's') +
+        ' &middot; <b>' + upcoming + '</b> still to come</span>' +
+      '<span class="spacer"></span>' +
+      '<button id="bkCopy">Copy summary</button>' +
+    '</div>' +
+    months.map(mk => {
+      const rows = byMonth[mk];
+      const [yy,mm] = mk.split('-').map(Number);
+      const shut = state.collapsed.indexOf('bk:' + mk) !== -1;
+      const allPast = rows.every(e => e.date < today);
+      return '<section class="clsec card' + (allPast ? ' allDone' : '') + '" data-bk="' + mk + '">' +
+        '<button class="clhead" data-bk-toggle="' + mk + '">' +
+          '<span class="chev">' + (shut ? '&#9656;' : '&#9662;') + '</span>' +
+          '<span class="clname">' + MONTHS[mm-1] + ' ' + yy + '</span>' +
+          '<span class="clfrac">' + rows.length + '</span>' +
+        '</button>' +
+        (shut ? '' : '<div class="clrows">' + rows.map(row).join('') + '</div>') +
+      '</section>';
+    }).join('');
+}
+
+function bookingsText(){
+  const all = (state.events || []).slice().sort((a,b) =>
+    (a.date + (a.time || '99:99')).localeCompare(b.date + (b.time || '99:99')));
+  const out = ['Wedding bookings — ' + todayKey(), ''];
+  let month = '';
+  all.forEach(e => {
+    const [yy,mm,dd] = e.date.split('-').map(Number);
+    const label = MONTHS[mm-1] + ' ' + yy;
+    if(label !== month){ month = label; out.push('## ' + label); }
+    const bits = [e.time || 'time tbc', kindInfo(e.kind).label];
+    if(e.where) bits.push(e.where);
+    if(e.who) bits.push('with ' + e.who);
+    out.push('- ' + dd + ' — ' + e.title + '  (' + bits.join(', ') + ')' +
+      (e.note ? '\n    ' + e.note : ''));
+  });
+  return out.join('\n');
+}
+
 function renderCalendar(){
   const y = calCursor.getFullYear(), m = calCursor.getMonth();
   document.getElementById('calMonth').textContent = MONTHS[m] + ' ' + y;
@@ -2065,6 +2172,50 @@ document.getElementById('calDay').addEventListener('click', e => {
   if(editingEvId === id) editingEvId = null;
   save();
   renderCalendar();
+});
+
+/* ---------- bookings page ---------- */
+// Editing from here hands over to the calendar, where the form lives.
+function openEventForEdit(id){
+  const ev = (state.events || []).find(x => x.id === id);
+  if(!ev) return;
+  const [yy,mm] = ev.date.split('-').map(Number);
+  calSelected = ev.date;
+  calCursor = new Date(yy, mm - 1, 1);
+  editingEvId = id;
+  document.querySelector('[data-pane=calendar]').click();
+  renderCalendar();
+  const box = document.getElementById('evTitle');
+  if(box){ box.focus(); box.select(); box.scrollIntoView({block:'center'}); }
+}
+
+document.getElementById('calList').addEventListener('click', e => {
+  const mk = e.target.closest('[data-bk-toggle]');
+  if(mk){
+    const k = 'bk:' + mk.dataset.bkToggle;
+    const i = state.collapsed.indexOf(k);
+    if(i === -1) state.collapsed.push(k); else state.collapsed.splice(i, 1);
+    save(); renderCalList();
+    return;
+  }
+  if(e.target.id === 'bkCopy'){ copy(bookingsText()); return; }
+
+  const editId = e.target.dataset.evEdit;
+  if(editId){ openEventForEdit(editId); return; }
+
+  const delId = e.target.dataset.evDel;
+  if(!delId) return;
+  const ev = (state.events || []).find(x => x.id === delId);
+  if(!ev) return;
+  if(!confirm('Delete this booking permanently?\n\n' + ev.title)) return;
+  state.events = state.events.filter(x => x.id !== delId);
+  save(); renderCalList();
+});
+
+document.getElementById('calList').addEventListener('dblclick', e => {
+  const row = e.target.closest('[data-ev]');
+  if(!row || e.target.closest('button')) return;
+  openEventForEdit(row.dataset.ev);
 });
 
 // Double-clicking a row opens it for editing, same gesture as the follow-ups.
@@ -2668,11 +2819,13 @@ document.querySelector('.tabs').addEventListener('click', e => {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t === b));
   const pane = b.dataset.pane;
   const PANES = {tasks:'tasksPane', checklist:'checklistPane', calendar:'calendarPane',
+    bookings:'bookingsPane',
     budget:'budgetPane', minutes:'minutesPane'};
   Object.keys(PANES).forEach(k => el(PANES[k]).classList.toggle('hide', k !== pane));
   if(pane === 'budget') renderBudget();
   if(pane === 'checklist') renderChecklist();
   if(pane === 'calendar') renderCalendar();
+  if(pane === 'bookings') renderCalList();
   const minutes = pane === 'minutes';
   if(minutes){
     if(!el('mDate').value) el('mDate').value = todayKey();
