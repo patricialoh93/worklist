@@ -276,6 +276,57 @@
   .warn.hide{display:none}
   .warn b{color:var(--danger)}
 
+  /* ---------- calendar ---------- */
+  .calbar{display:flex;align-items:center;gap:8px;padding:11px 14px;margin-bottom:10px}
+  .calbar button{padding:6px 12px;min-width:38px}
+  .calmonth{font-family:var(--serif);font-size:21px;font-weight:600;min-width:180px;
+    text-align:center;color:var(--accent-deep)}
+  .calwrap{padding:10px;overflow:hidden}
+  .caldow{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px}
+  .caldow span{text-align:center;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);padding:4px 0}
+  .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .calcell{display:flex;flex-direction:column;align-items:stretch;gap:3px;min-height:92px;
+    padding:6px;border:1px solid var(--line-soft);border-radius:9px;background:var(--panel);
+    text-align:left;color:var(--text);overflow:hidden}
+  .calcell:hover{border-color:var(--accent);background:var(--panel-2);color:var(--text)}
+  .calcell.other{opacity:.38}
+  .calcell.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  .calcell.wedding{background:color-mix(in srgb, var(--accent) 12%, var(--panel));
+    border-color:var(--accent)}
+  .calcell.sel{box-shadow:0 0 0 2px var(--accent)}
+  .calnum{font-size:12.5px;font-weight:600;color:var(--text-soft);
+    font-variant-numeric:tabular-nums}
+  .calcell.today .calnum{color:var(--accent-deep)}
+  .calring{font-size:11px}
+  .calchip{font-size:10px;line-height:1.35;padding:2px 5px;border-radius:5px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+  .calchip.ev{background:var(--accent-soft);color:var(--accent-deep);font-weight:500}
+  .calchip.task{background:color-mix(in srgb, var(--tc, var(--muted)) 16%, transparent);
+    color:var(--tc, var(--text-soft))}
+  .calchip.fu{background:color-mix(in srgb, var(--wait) 15%, transparent);color:var(--wait)}
+  .calmore{font-size:9.5px;color:var(--muted)}
+
+  .daypanel{padding:14px 16px;margin-top:10px}
+  .dayhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .dayhead h3{margin:0;font-family:var(--serif);font-size:20px;font-weight:600}
+  .daylist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+  .dayitem{display:flex;align-items:center;gap:10px;padding:8px 6px;font-size:13.5px;
+    border-bottom:1px solid var(--line-soft)}
+  .dayitem:last-child{border-bottom:none}
+  .dico{flex:none;font-size:15px;width:20px;text-align:center}
+  .dtime{flex:none;width:56px;font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px}
+  .dtitle{flex:1;display:flex;flex-direction:column;gap:2px;word-break:break-word}
+  .dnote{font-size:12px;color:var(--muted)}
+  .daynone{color:var(--muted);font-size:13px;margin:4px 0 0}
+  .dayalso{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:12px;
+    padding-top:10px;border-top:1px solid var(--line-soft)}
+  .dayalsohead{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+  .dayadd{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:14px;
+    padding-top:12px;border-top:1px solid var(--line-soft)}
+  .dayadd input[type=text]{flex:1 1 180px;min-width:0}
+  .dayadd input[type=time]{flex:0 0 auto}
+
   /* ---------- checklist timeline ---------- */
   .cltop{display:flex;gap:22px;align-items:flex-end;flex-wrap:wrap;padding:16px 18px;
     margin-bottom:12px}
@@ -457,6 +508,13 @@
     .tiles{grid-template-columns:1fr 1fr}
 
     /* checklist */
+    .calcell{min-height:64px;padding:4px;gap:2px}
+    .calchip{font-size:8.5px;padding:1px 3px}
+    .calmonth{font-size:17px;min-width:120px}
+    .calbar{padding:9px 10px;gap:6px}
+    .caldow span{font-size:9px}
+    .dayadd input[type=text]{flex:1 1 100%}
+    .dayadd button{flex:1 1 100%}
     .clhead{padding:12px 13px}
     .clname{font-size:17px}
     .clrow{padding:12px 13px;flex-wrap:wrap}
@@ -485,6 +543,7 @@
   <nav class="tabs">
     <button class="tab on" data-pane="tasks">Tasks</button>
     <button class="tab" data-pane="checklist">Checklist</button>
+    <button class="tab" data-pane="calendar">Calendar</button>
     <button class="tab" data-pane="budget">Budget</button>
     <button class="tab" data-pane="minutes">Meeting minutes</button>
   </nav>
@@ -534,6 +593,25 @@
     <span class="spacer"></span>
     <button id="clearDone">Clear completed</button>
   </footer>
+  </section>
+
+  <section id="calendarPane" class="hide">
+    <div class="card calbar">
+      <button id="calPrev" title="Previous month">&#8249;</button>
+      <span class="calmonth" id="calMonth"></span>
+      <button id="calNext" title="Next month">&#8250;</button>
+      <button id="calToday">Today</button>
+      <span class="spacer"></span>
+      <span class="saved" id="calCount"></span>
+    </div>
+    <div class="card calwrap">
+      <div class="caldow">
+        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span>
+        <span>Fri</span><span>Sat</span><span>Sun</span>
+      </div>
+      <div class="calgrid" id="calGrid"></div>
+    </div>
+    <div id="calDay"></div>
   </section>
 
   <section id="checklistPane" class="hide">
@@ -654,9 +732,9 @@ const PRIO = {
   0: {label:'No priority', hint:'—'}
 };
 const VIEWS = [
-  ['open','Open'], ['today','Today'], ['week','This week'],
+  ['all','All'], ['open','Open'], ['today','Today'], ['week','This week'],
   ['overdue','Overdue'], ['waiting','Waiting on'], ['followup','Needs follow-up'],
-  ['done','Done'], ['all','All']
+  ['done','Done']
 ];
 
 let state = load();
@@ -665,7 +743,8 @@ let sortBy = 'smart';
 let editingFuId = null;   // follow-up currently open for editing
 
 function blankState(){
-  return {tasks:[], minutes:[], budget:newBudget(), weddingDate:'', collapsed:[], palette:'taupe'};
+  return {tasks:[], minutes:[], budget:newBudget(), weddingDate:'', collapsed:[],
+    events:[], palette:'taupe'};
 }
 
 // Fill in anything a document from an older version is missing.
@@ -675,6 +754,7 @@ function normalize(raw){
   if(!raw.budget || !Array.isArray(raw.budget.items)) raw.budget = newBudget();
   if(typeof raw.weddingDate !== 'string') raw.weddingDate = '';
   if(!Array.isArray(raw.collapsed)) raw.collapsed = [];
+  if(!Array.isArray(raw.events)) raw.events = [];
   if(typeof raw.palette !== 'string') raw.palette = 'taupe';
   return raw;
 }
@@ -725,6 +805,7 @@ function adopt(raw){
   render();
   if(!document.getElementById('budgetPane').classList.contains('hide')) renderBudget();
   if(!document.getElementById('checklistPane').classList.contains('hide')) renderChecklist();
+  if(!document.getElementById('calendarPane').classList.contains('hide')) renderCalendar();
   if(!document.getElementById('minutesPane').classList.contains('hide')) renderMinutes();
 }
 
@@ -1719,6 +1800,8 @@ function applyPalette(){
     render();
     if(!document.getElementById('budgetPane').classList.contains('hide')) renderBudget();
     if(!document.getElementById('checklistPane').classList.contains('hide')) renderChecklist();
+  if(!document.getElementById('calendarPane').classList.contains('hide')) renderCalendar();
+    if(!document.getElementById('calendarPane').classList.contains('hide')) renderCalendar();
   }
 }
 let booted = false;
@@ -1729,6 +1812,189 @@ if(window.matchMedia){
   if(mq.addEventListener) mq.addEventListener('change', relisten);
   else if(mq.addListener) mq.addListener(relisten);
 }
+
+/* ================= calendar ================= */
+// Bookings and rehearsals you enter here, plus everything already dated elsewhere in the
+// app: task due dates, follow-up due dates and the wedding day itself.
+const EVENT_KINDS = [
+  ['booking','Booking','📅'], ['rehearsal','Rehearsal','🎼'], ['fitting','Fitting','👗'],
+  ['viewing','Viewing','🏛'], ['tasting','Tasting','🍽'], ['meeting','Meeting','🤝'],
+  ['payment','Payment due','💰'], ['other','Other','•']
+];
+const KINDMAP = {};
+EVENT_KINDS.forEach(([k,l,i]) => { KINDMAP[k] = {label:l, icon:i}; });
+function kindInfo(k){ return KINDMAP[k] || {label:'Other', icon:'•'}; }
+
+let calCursor = new Date();          // any date inside the month being shown
+let calSelected = null;              // 'YYYY-MM-DD'
+
+const MONTHS = ['January','February','March','April','May','June','July','August',
+  'September','October','November','December'];
+
+function eventsOn(k){
+  return (state.events || []).filter(e => e.date === k)
+    .sort((a,b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+}
+function tasksDueOn(k){ return state.tasks.filter(t => t.due === k); }
+function followupsDueOn(k){
+  const out = [];
+  state.tasks.forEach(t => (t.followups || []).forEach(f => {
+    if(f.due === k && !f.done) out.push({task:t, fu:f});
+  }));
+  return out;
+}
+
+function renderCalendar(){
+  const y = calCursor.getFullYear(), m = calCursor.getMonth();
+  document.getElementById('calMonth').textContent = MONTHS[m] + ' ' + y;
+
+  const first = new Date(y, m, 1);
+  // Monday-first grid
+  const lead = (first.getDay() + 6) % 7;
+  const start = addDays(first, -lead);
+  const todayK = todayKey();
+
+  let cells = '';
+  for(let i = 0; i < 42; i++){
+    const d = addDays(start, i);
+    const k = key(d);
+    const evs = eventsOn(k);
+    const dues = tasksDueOn(k);
+    const fus = followupsDueOn(k);
+    const cls = ['calcell'];
+    if(d.getMonth() !== m) cls.push('other');
+    if(k === todayK) cls.push('today');
+    if(k === state.weddingDate) cls.push('wedding');
+    if(k === calSelected) cls.push('sel');
+    if(!evs.length && !dues.length && !fus.length) cls.push('empty');
+
+    const chips = evs.slice(0, 3).map(e =>
+      '<span class="calchip ev">' + kindInfo(e.kind).icon + ' ' +
+      (e.time ? esc(e.time) + ' ' : '') + esc(e.title) + '</span>').join('');
+    const taskChips = dues.slice(0, 2).map(t => {
+      const ti = tagInfo(t.project);
+      return '<span class="calchip task"' + (ti ? ' style="--tc:' + ti.color + '"' : '') + '>' +
+        esc(t.title) + '</span>';
+    }).join('');
+    const fuChips = fus.slice(0, 2).map(x =>
+      '<span class="calchip fu">' + esc(x.fu.text) + '</span>').join('');
+    const extra = (evs.length + dues.length + fus.length) - (evs.slice(0,3).length +
+      dues.slice(0,2).length + fus.slice(0,2).length);
+
+    cells += '<button class="' + cls.join(' ') + '" data-day="' + k + '">' +
+      '<span class="calnum">' + d.getDate() +
+        (k === state.weddingDate ? ' <span class="calring">&#128141;</span>' : '') + '</span>' +
+      chips + taskChips + fuChips +
+      (extra > 0 ? '<span class="calmore">+' + extra + ' more</span>' : '') +
+    '</button>';
+  }
+  document.getElementById('calGrid').innerHTML = cells;
+
+  const total = (state.events || []).length;
+  document.getElementById('calCount').textContent =
+    total + ' booking' + (total === 1 ? '' : 's') + ' saved';
+
+  renderCalDay();
+}
+
+function renderCalDay(){
+  const host = document.getElementById('calDay');
+  if(!calSelected){
+    host.innerHTML = '<div class="card empty">Pick a day to add a rehearsal, booking or ' +
+      'appointment.</div>';
+    return;
+  }
+  const evs = eventsOn(calSelected);
+  const dues = tasksDueOn(calSelected);
+  const fus = followupsDueOn(calSelected);
+  const [yy,mm,dd] = calSelected.split('-').map(Number);
+  const nice = dd + ' ' + MONTHS[mm-1] + ' ' + yy;
+
+  host.innerHTML = '<div class="card daypanel">' +
+    '<div class="dayhead"><h3>' + esc(nice) + '</h3>' +
+      (calSelected === state.weddingDate ? '<span class="tag">&#128141; Wedding day</span>' : '') +
+    '</div>' +
+    (evs.length ? '<ul class="daylist">' + evs.map(e =>
+      '<li class="dayitem" data-ev="' + e.id + '">' +
+        '<span class="dico">' + kindInfo(e.kind).icon + '</span>' +
+        '<span class="dtime">' + (e.time ? esc(e.time) : '—') + '</span>' +
+        '<span class="dtitle">' + esc(e.title) +
+          (e.note ? '<span class="dnote">' + esc(e.note) + '</span>' : '') + '</span>' +
+        '<span class="tag">' + esc(kindInfo(e.kind).label) + '</span>' +
+        '<button class="icon" data-ev-del="' + e.id + '" title="Delete">&times;</button>' +
+      '</li>').join('') + '</ul>'
+      : '<p class="daynone">Nothing booked yet.</p>') +
+    (dues.length || fus.length
+      ? '<div class="dayalso"><span class="dayalsohead">Also due this day</span>' +
+        dues.map(t => '<span class="tag">' + esc(t.title) + '</span>').join('') +
+        fus.map(x => '<span class="tag wait">' + esc(x.fu.text) + '</span>').join('') +
+        '</div>'
+      : '') +
+    '<form class="dayadd" id="evForm">' +
+      '<input type="text" id="evTitle" placeholder="What is it — e.g. Church rehearsal" required>' +
+      '<input type="time" id="evTime">' +
+      '<select id="evKind">' +
+        EVENT_KINDS.map(([k,l,i]) => '<option value="' + k + '">' + i + ' ' + l + '</option>').join('') +
+      '</select>' +
+      '<input type="text" id="evNote" placeholder="Note (optional)">' +
+      '<button class="primary" type="submit">Add to ' + esc(nice) + '</button>' +
+    '</form>' +
+  '</div>';
+}
+
+document.getElementById('calPrev').onclick = () => {
+  calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() - 1, 1);
+  renderCalendar();
+};
+document.getElementById('calNext').onclick = () => {
+  calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 1);
+  renderCalendar();
+};
+document.getElementById('calToday').onclick = () => {
+  calCursor = new Date();
+  calSelected = todayKey();
+  renderCalendar();
+};
+
+document.getElementById('calGrid').addEventListener('click', e => {
+  const cell = e.target.closest('[data-day]');
+  if(!cell) return;
+  calSelected = cell.dataset.day;
+  const [yy,mm] = calSelected.split('-').map(Number);
+  calCursor = new Date(yy, mm - 1, 1);       // follow a click into an adjacent month
+  renderCalendar();
+  const panel = document.getElementById('calDay');
+  if(panel) panel.scrollIntoView({block:'nearest', behavior:'smooth'});
+});
+
+document.getElementById('calDay').addEventListener('submit', e => {
+  if(e.target.id !== 'evForm') return;
+  e.preventDefault();
+  const title = document.getElementById('evTitle').value.trim();
+  if(!title || !calSelected) return;
+  state.events = state.events || [];
+  state.events.push({
+    id: uid(), date: calSelected, title,
+    time: document.getElementById('evTime').value,
+    kind: document.getElementById('evKind').value,
+    note: document.getElementById('evNote').value.trim(),
+    created: nowISO()
+  });
+  save();
+  renderCalendar();
+  toast('Added to ' + calSelected);
+});
+
+document.getElementById('calDay').addEventListener('click', e => {
+  const id = e.target.dataset.evDel;
+  if(!id) return;
+  const ev = (state.events || []).find(x => x.id === id);
+  if(!ev) return;
+  if(!confirm('Delete this entry permanently?\n\n' + ev.title)) return;
+  state.events = state.events.filter(x => x.id !== id);
+  save();
+  renderCalendar();
+});
 
 /* ================= checklist timeline ================= */
 // Sections run from earliest planning to after the day, measured backwards from the wedding
@@ -2204,10 +2470,12 @@ document.querySelector('.tabs').addEventListener('click', e => {
   if(!b) return;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t === b));
   const pane = b.dataset.pane;
-  const PANES = {tasks:'tasksPane', checklist:'checklistPane', budget:'budgetPane', minutes:'minutesPane'};
+  const PANES = {tasks:'tasksPane', checklist:'checklistPane', calendar:'calendarPane',
+    budget:'budgetPane', minutes:'minutesPane'};
   Object.keys(PANES).forEach(k => el(PANES[k]).classList.toggle('hide', k !== pane));
   if(pane === 'budget') renderBudget();
   if(pane === 'checklist') renderChecklist();
+  if(pane === 'calendar') renderCalendar();
   const minutes = pane === 'minutes';
   if(minutes){
     if(!el('mDate').value) el('mDate').value = todayKey();
