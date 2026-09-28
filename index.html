@@ -324,7 +324,9 @@
   .dayalsohead{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
   .dayadd{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:14px;
     padding-top:12px;border-top:1px solid var(--line-soft)}
-  .dayadd input[type=text]{flex:1 1 180px;min-width:0}
+  .dayadd input[type=text]{flex:1 1 150px;min-width:0}
+  .dayadd.editing{background:var(--accent-soft);margin:14px -8px 0;padding:12px 8px;border-radius:9px}
+  .dayitem.editing{background:var(--accent-soft);border-radius:7px}
   .dayadd input[type=time]{flex:0 0 auto}
 
   /* ---------- checklist timeline ---------- */
@@ -416,6 +418,9 @@
   .mic.live{background:var(--danger);border-color:var(--danger);color:#fff}
   .mic.live .dot{opacity:1;animation:pulse 1.1s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+  .mtools{display:flex;gap:7px;align-items:center;margin-top:12px;flex-wrap:wrap}
+  .mtools button{padding:6px 12px;font-size:12.5px}
+  .mtip{font-size:11.5px;color:var(--muted)}
   .micnote{font-size:12.3px;color:var(--muted);margin:10px 2px 0;min-height:1.2em;font-style:italic}
   .micnote.err{color:var(--danger);font-style:normal}
   #mText{width:100%;margin-top:12px;line-height:1.65;resize:vertical;font-size:14.5px;
@@ -666,7 +671,12 @@
         <input type="date" id="mDate">
       </div>
       <p class="micnote" id="micNote"></p>
-      <textarea id="mText" rows="12" placeholder="Speak, or type here. Dictated words land as you talk — you can edit freely at any time."></textarea>
+      <div class="mtools">
+        <button type="button" id="mBullet" title="Bullet list — Ctrl+Shift+8">&bull;&nbsp; Bullets</button>
+        <button type="button" id="mNumber" title="Numbered list — Ctrl+Shift+7">1.&nbsp; Numbered</button>
+        <span class="mtip">Enter continues the list</span>
+      </div>
+      <textarea id="mText" rows="7" placeholder="Speak, or type here. Dictated words land as you talk — you can edit freely at any time."></textarea>
       <div class="recrow end">
         <span class="saved" id="mCount"></span>
         <span class="spacer"></span>
@@ -678,6 +688,7 @@
       Dictation needs microphone permission and works best in Chrome or Edge.
       Recording keeps going through pauses — press Stop when the meeting ends.
     </p>
+    <h3 class="mlisthead" id="mListHead"></h3>
     <div class="list" id="mList"></div>
   </section>
 </div>
@@ -1827,9 +1838,29 @@ function kindInfo(k){ return KINDMAP[k] || {label:'Other', icon:'•'}; }
 
 let calCursor = new Date();          // any date inside the month being shown
 let calSelected = null;              // 'YYYY-MM-DD'
+let editingEvId = null;              // calendar entry open for editing
 
 const MONTHS = ['January','February','March','April','May','June','July','August',
   'September','October','November','December'];
+
+// Venues you have used before, offered as suggestions so they stay consistent.
+function knownVenues(){
+  return [...new Set((state.events || []).map(e => e.where).filter(Boolean))].sort();
+}
+
+// Everyone the app already knows about: task owners, people you are waiting on, and
+// anyone named on an earlier event.
+function knownPeople(){
+  const names = [];
+  state.tasks.forEach(t => {
+    if(t.owner) names.push(t.owner);
+    (t.followups || []).forEach(f => { if(f.waitingOn) names.push(f.waitingOn); });
+  });
+  (state.events || []).forEach(e => {
+    String(e.who || '').split(',').forEach(n => { if(n.trim()) names.push(n.trim()); });
+  });
+  return [...new Set(names)].sort();
+}
 
 function eventsOn(k){
   return (state.events || []).filter(e => e.date === k)
@@ -1915,12 +1946,16 @@ function renderCalDay(){
       (calSelected === state.weddingDate ? '<span class="tag">&#128141; Wedding day</span>' : '') +
     '</div>' +
     (evs.length ? '<ul class="daylist">' + evs.map(e =>
-      '<li class="dayitem" data-ev="' + e.id + '">' +
+      '<li class="dayitem' + (editingEvId === e.id ? ' editing' : '') + '" data-ev="' + e.id +
+        '" title="Double-click to edit">' +
         '<span class="dico">' + kindInfo(e.kind).icon + '</span>' +
         '<span class="dtime">' + (e.time ? esc(e.time) : '—') + '</span>' +
         '<span class="dtitle">' + esc(e.title) +
-          (e.note ? '<span class="dnote">' + esc(e.note) + '</span>' : '') + '</span>' +
+          ((e.where || e.who || e.note)
+            ? '<span class="dnote">' + [e.where, e.who, e.note].filter(Boolean).map(esc).join(' · ') + '</span>'
+            : '') + '</span>' +
         '<span class="tag">' + esc(kindInfo(e.kind).label) + '</span>' +
+        '<button class="icon" data-ev-edit="' + e.id + '" title="Edit">&#9998;</button>' +
         '<button class="icon" data-ev-del="' + e.id + '" title="Delete">&times;</button>' +
       '</li>').join('') + '</ul>'
       : '<p class="daynone">Nothing booked yet.</p>') +
@@ -1930,15 +1965,33 @@ function renderCalDay(){
         fus.map(x => '<span class="tag wait">' + esc(x.fu.text) + '</span>').join('') +
         '</div>'
       : '') +
-    '<form class="dayadd" id="evForm">' +
-      '<input type="text" id="evTitle" placeholder="What is it — e.g. Church rehearsal" required>' +
-      '<input type="time" id="evTime">' +
-      '<select id="evKind">' +
-        EVENT_KINDS.map(([k,l,i]) => '<option value="' + k + '">' + i + ' ' + l + '</option>').join('') +
-      '</select>' +
-      '<input type="text" id="evNote" placeholder="Note (optional)">' +
-      '<button class="primary" type="submit">Add to ' + esc(nice) + '</button>' +
-    '</form>' +
+    (() => {
+      const ed = editingEvId ? evs.find(x => x.id === editingEvId) : null;
+      const v = f => ed ? esc(ed[f] || '') : '';
+      return '<form class="dayadd' + (ed ? ' editing' : '') + '" id="evForm">' +
+        '<input type="text" id="evTitle" placeholder="What is it — e.g. Church rehearsal" ' +
+          'value="' + v('title') + '" required>' +
+        '<input type="time" id="evTime" value="' + v('time') + '">' +
+        '<select id="evKind">' +
+          EVENT_KINDS.map(([k,l,i]) => '<option value="' + k + '"' +
+            (ed && ed.kind === k ? ' selected' : '') + '>' + i + ' ' + l + '</option>').join('') +
+        '</select>' +
+        '<input type="text" id="evWhere" placeholder="Venue / where" list="venueList" ' +
+          'autocomplete="off" value="' + v('where') + '">' +
+        '<datalist id="venueList">' +
+          knownVenues().map(x => '<option value="' + esc(x) + '"></option>').join('') +
+        '</datalist>' +
+        '<input type="text" id="evWho" placeholder="Who is involved" list="peopleList" ' +
+          'autocomplete="off" value="' + v('who') + '">' +
+        '<datalist id="peopleList">' +
+          knownPeople().map(x => '<option value="' + esc(x) + '"></option>').join('') +
+        '</datalist>' +
+        '<input type="text" id="evNote" placeholder="Note (optional)" value="' + v('note') + '">' +
+        '<button class="primary" type="submit">' +
+          (ed ? 'Save changes' : 'Add to ' + esc(nice)) + '</button>' +
+        (ed ? '<button type="button" id="evCancel">Cancel</button>' : '') +
+      '</form>';
+    })() +
   '</div>';
 }
 
@@ -1972,28 +2025,56 @@ document.getElementById('calDay').addEventListener('submit', e => {
   e.preventDefault();
   const title = document.getElementById('evTitle').value.trim();
   if(!title || !calSelected) return;
-  state.events = state.events || [];
-  state.events.push({
-    id: uid(), date: calSelected, title,
+  const fields = {
+    title,
     time: document.getElementById('evTime').value,
     kind: document.getElementById('evKind').value,
-    note: document.getElementById('evNote').value.trim(),
-    created: nowISO()
-  });
-  save();
-  renderCalendar();
-  toast('Added to ' + calSelected);
+    where: document.getElementById('evWhere').value.trim(),
+    who: document.getElementById('evWho').value.trim(),
+    note: document.getElementById('evNote').value.trim()
+  };
+  state.events = state.events || [];
+  if(editingEvId){
+    const ev = state.events.find(x => x.id === editingEvId);
+    if(ev) Object.assign(ev, fields, {updated: nowISO()});
+    editingEvId = null;
+    save(); renderCalendar(); toast('Entry updated');
+  } else {
+    state.events.push(Object.assign({id: uid(), date: calSelected, created: nowISO()}, fields));
+    save(); renderCalendar(); toast('Added to ' + calSelected);
+  }
 });
 
 document.getElementById('calDay').addEventListener('click', e => {
+  const editId = e.target.dataset.evEdit;
+  if(editId){
+    editingEvId = editId;
+    renderCalDay();
+    const box = document.getElementById('evTitle');
+    if(box){ box.focus(); box.select(); }
+    return;
+  }
+  if(e.target.id === 'evCancel'){ editingEvId = null; renderCalDay(); return; }
+
   const id = e.target.dataset.evDel;
   if(!id) return;
   const ev = (state.events || []).find(x => x.id === id);
   if(!ev) return;
   if(!confirm('Delete this entry permanently?\n\n' + ev.title)) return;
   state.events = state.events.filter(x => x.id !== id);
+  if(editingEvId === id) editingEvId = null;
   save();
   renderCalendar();
+});
+
+// Double-clicking a row opens it for editing, same gesture as the follow-ups.
+document.getElementById('calDay').addEventListener('dblclick', e => {
+  const row = e.target.closest('[data-ev]');
+  if(!row || e.target.closest('button')) return;
+  editingEvId = row.dataset.ev;
+  renderCalDay();
+  const box = document.getElementById('evTitle');
+  if(box){ box.focus(); box.select(); }
 });
 
 /* ================= checklist timeline ================= */
@@ -2267,6 +2348,8 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null;          // the SpeechRecognition instance
 let recording = false;   // what the user asked for, not what the engine is doing
 let editingId = null;    // set when re-opening a saved entry
+let restarts = 0;        // consecutive empty sessions
+let heardSomething = false;
 
 const el = id => document.getElementById(id);
 
@@ -2281,11 +2364,33 @@ function setMicUI(){
   el('micLabel').textContent = recording ? 'Stop recording' : 'Start recording';
 }
 
-function startRec(){
+async function startRec(){
   if(!SR){
     micNote('This browser has no speech recognition. Chrome or Edge support it — meanwhile you can type notes below.', true);
     return;
   }
+  if(!window.isSecureContext){
+    micNote('Dictation needs a secure connection (https). Open the site by its https address.', true);
+    return;
+  }
+
+  // Ask for the microphone up front. Without this the failure is silent: recognition just
+  // ends immediately and it looks like the button does nothing.
+  try{
+    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+      const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+      stream.getTracks().forEach(t => t.stop());
+    }
+  }catch(err){
+    const why = err && err.name === 'NotAllowedError'
+      ? 'Microphone permission was refused. Click the padlock in the address bar, set Microphone to Allow, then reload.'
+      : (err && err.name === 'NotFoundError'
+        ? 'No microphone was found on this device.'
+        : 'Microphone unavailable: ' + (err && err.name ? err.name : 'unknown'));
+    micNote(why, true);
+    return;
+  }
+
   rec = new SR();
   rec.continuous = true;
   rec.interimResults = true;
@@ -2295,8 +2400,8 @@ function startRec(){
     let finalChunk = '', interim = '';
     for(let i = e.resultIndex; i < e.results.length; i++){
       const txt = e.results[i][0].transcript;
-      if(e.results[i].isFinal) finalChunk += txt;
-      else interim += txt;
+      if(e.results[i].isFinal){ finalChunk += txt; heardSomething = true; }
+      else { interim += txt; heardSomething = true; }
     }
     if(finalChunk){
       const box = el('mText');
@@ -2320,20 +2425,34 @@ function startRec(){
     }
   };
 
-  // Chrome ends the session on its own after a silence; restart while the user still wants it.
+  rec.onstart = () => { heardSomething = false; micNote('Listening — speak normally, pauses are fine.'); };
+
+  // Chrome ends the session on its own after a silence; restart while the user still wants
+  // it. But if it keeps ending instantly without hearing anything, say so instead of
+  // looping forever behind a button that looks active.
   rec.onend = () => {
-    if(recording){
-      try{ rec.start(); }catch(err){ /* already starting */ }
-    } else {
+    if(!recording){
       micNote('Stopped. Edit the text if you need to, then Save minutes.');
+      return;
     }
+    if(heardSomething){ restarts = 0; }
+    else if(++restarts >= 4){
+      recording = false; setMicUI();
+      micNote('The speech service keeps dropping the session without hearing anything. ' +
+        'Check the microphone is not muted or in use by another app, and that you are in ' +
+        'Chrome or Edge with a working connection. Typing still works.', true);
+      return;
+    }
+    try{ rec.start(); }catch(err){ /* already starting */ }
   };
 
   try{
+    restarts = 0;
+    heardSomething = false;
     rec.start();
     recording = true;
     setMicUI();
-    micNote('Listening — speak normally, pauses are fine.');
+    micNote('Starting…');
   }catch(err){
     micNote('Could not start recording: ' + err.message, true);
   }
@@ -2344,6 +2463,70 @@ function stopRec(){
   setMicUI();
   if(rec){ try{ rec.stop(); }catch(e){} }
 }
+
+/* ---------- list formatting in the minutes editor ---------- */
+const BULLET_RE = /^(\s*)[-*•]\s+/;
+const NUMBER_RE = /^(\s*)\d+[.)]\s+/;
+
+// Toggle the whole selection: if every non-blank line already carries the marker, strip it.
+function applyList(kind){
+  const ta = el('mText');
+  const val = ta.value;
+  const from = val.lastIndexOf('\n', ta.selectionStart - 1) + 1;
+  let to = val.indexOf('\n', ta.selectionEnd);
+  if(to === -1) to = val.length;
+
+  const lines = val.slice(from, to).split('\n');
+  const re = kind === 'bullet' ? BULLET_RE : NUMBER_RE;
+  const filled = lines.filter(l => l.trim());
+  const allMarked = filled.length > 0 && filled.every(l => re.test(l));
+
+  let n = 0;
+  const out = lines.map(l => {
+    const bare = l.replace(BULLET_RE, '$1').replace(NUMBER_RE, '$1');
+    if(!bare.trim()) return bare;
+    if(allMarked) return bare;
+    n++;
+    return kind === 'bullet' ? '- ' + bare.trim() : n + '. ' + bare.trim();
+  });
+
+  const block = out.join('\n');
+  ta.value = val.slice(0, from) + block + val.slice(to);
+  ta.focus();
+  ta.setSelectionRange(from, from + block.length);
+  updateCount();
+}
+
+el('mBullet').onclick = () => applyList('bullet');
+el('mNumber').onclick = () => applyList('number');
+
+el('mText').addEventListener('keydown', e => {
+  if(e.ctrlKey && e.shiftKey && (e.key === '8' || e.key === '*')){ e.preventDefault(); applyList('bullet'); return; }
+  if(e.ctrlKey && e.shiftKey && (e.key === '7' || e.key === '&')){ e.preventDefault(); applyList('number'); return; }
+  if(e.key !== 'Enter' || e.shiftKey) return;
+
+  // Enter on a list line carries the marker down; Enter on an empty marker ends the list.
+  const ta = e.target, val = ta.value, pos = ta.selectionStart;
+  if(pos !== ta.selectionEnd) return;
+  const from = val.lastIndexOf('\n', pos - 1) + 1;
+  const line = val.slice(from, pos);
+  const b = line.match(/^(\s*)([-*•])\s+/);
+  const num = line.match(/^(\s*)(\d+)([.)])\s+/);
+  if(!b && !num) return;
+
+  e.preventDefault();
+  const content = line.replace(BULLET_RE, '').replace(NUMBER_RE, '');
+  if(!content.trim()){
+    ta.value = val.slice(0, from) + val.slice(pos);
+    ta.setSelectionRange(from, from);
+  } else {
+    const prefix = b ? b[1] + b[2] + ' ' : num[1] + (Number(num[2]) + 1) + num[3] + ' ';
+    ta.value = val.slice(0, pos) + '\n' + prefix + val.slice(pos);
+    const caret = pos + 1 + prefix.length;
+    ta.setSelectionRange(caret, caret);
+  }
+  updateCount();
+});
 
 function updateCount(){
   const words = el('mText').value.trim().split(/\s+/).filter(Boolean).length;
@@ -2370,6 +2553,14 @@ function saveMinutes(){
   el('mText').value = ''; el('mTitle').value = '';
   updateCount(); micNote('Saved.');
   renderMinutes();
+  // The editor is tall; without this the new entry lands below the fold and looks lost.
+  const first = document.querySelector('#mList .min');
+  if(first){
+    first.scrollIntoView({block:'center', behavior:'smooth'});
+    first.classList.add('new');
+    setTimeout(() => first.classList.remove('new'), 1600);
+  }
+  toast('Minutes saved');
 }
 
 // Lines that look like commitments — the ones worth turning into tasks.
@@ -2409,6 +2600,12 @@ function minuteHTML(m){
 
 function renderMinutes(){
   const list = el('mList');
+  const head = el('mListHead');
+  if(head){
+    const n = state.minutes.length;
+    head.textContent = n ? 'Saved minutes (' + n + ')' : '';
+    head.classList.toggle('hide', !n);
+  }
   if(!state.minutes.length){
     list.innerHTML = '<div class="card empty">No minutes yet. Give the meeting a title, hit ' +
       '<b>Start recording</b>, and talk.</div>';
