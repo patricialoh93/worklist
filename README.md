@@ -53,3 +53,16 @@ health check keeps working either way.
 
 Note that basic auth sends credentials on every request — fine over Railway's HTTPS for a
 personal tool, but don't reuse a password you use anywhere else.
+
+## Storage
+
+The shared list lives in `state.json` inside `DATA_DIR`, which defaults to `/data`.
+A Railway volume **must** be mounted there — without one the server happily writes to a
+directory inside the container and every deploy silently wipes the list.
+
+`GET /healthz` reports which it is:
+
+```
+ok <commit> data=/data storage=volume      durable
+ok <commit> data=/data storage=EPHEMERAL   wiped on next deploy
+```
